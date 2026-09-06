@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/.github/" />
+  <Folder Name="/.github/workflows/">
+    <File Path="docker-publish.yml" />
+  </Folder>
+  <Project Path="WireManager.API/WireManager.API.csproj" Id="69a246ba-5b5b-4b44-aea6-5ff7b597f0fe" />
+  <Project Path="WireManager/WireManager.Core.csproj" />
+</Solution>
