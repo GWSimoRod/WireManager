@@ -23,6 +23,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
+import { useTranslations } from 'next-intl'
 
 // Protocols that do NOT use a port (matched to the backend iptables rules)
 const PORTLESS_PROTOCOLS = new Set(['ALL', 'ICMP', 'ESP', 'GRE', 'IGMP'])
@@ -78,6 +79,10 @@ export function ServiceModal({
   onOpenChange,
   onSave,
 }: ServiceModalProps) {
+  const t = useTranslations('Services')
+  const tCommon = useTranslations('Common')
+  const tDialogs = useTranslations('Dialogs')
+  
   const [isLoading, setIsLoading] = useState(false)
   const [name, setName] = useState('')
   const [port, setPort] = useState('')
@@ -138,18 +143,18 @@ export function ServiceModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full max-w-full sm:max-w-md h-[100dvh] sm:h-auto max-h-[100dvh] sm:max-h-[90vh] rounded-none sm:rounded-xl overflow-y-auto p-4 sm:p-6 border-0 sm:border">
         <DialogHeader>
-          <DialogTitle>Nuovo Servizio</DialogTitle>
+          <DialogTitle>{t('modalTitle')}</DialogTitle>
           <DialogDescription>
-            Definisci un nuovo servizio di rete.
+            {t('modalDesc')}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="svc-name">Nome</Label>
+            <Label htmlFor="svc-name">{tCommon('name')}</Label>
             <Input
               id="svc-name"
-              placeholder="es. SSH Access"
+              placeholder={t('placeholderName')}
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -171,13 +176,14 @@ export function ServiceModal({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium text-amber-300/90">
-                    Suggerimento
+                    {t('suggestion')}
                   </p>
                   <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed">
                     <span className="text-zinc-300 font-medium">{globalHintLabel}</span>{' '}
-                    è tipicamente un servizio utilizzato da tutti i peer.
-                    Potresti voler attivare il flag{' '}
-                    <span className="text-amber-400/80 font-medium">Servizio Globale</span>.
+                    {t('suggestionText1')}
+                    <br />
+                    {t('suggestionText2')}{' '}
+                    <span className="text-amber-400/80 font-medium">{t('globalFlag')}</span>.
                   </p>
                   <button
                     type="button"
@@ -188,14 +194,14 @@ export function ServiceModal({
                     }}
                   >
                     <Globe className="h-3 w-3" />
-                    Attiva Servizio Globale
+                    {t('enableGlobal')}
                   </button>
                 </div>
                 <button
                   type="button"
                   className="shrink-0 rounded p-0.5 text-zinc-500 hover:text-zinc-300 transition-colors"
                   onClick={() => setSuggestionDismissed(true)}
-                  aria-label="Chiudi suggerimento"
+                  aria-label={t('closeSuggestion')}
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -204,7 +210,7 @@ export function ServiceModal({
           </div>
 
           <div className="space-y-2">
-            <Label>Protocollo</Label>
+            <Label>{t('protocol')}</Label>
             <Select value={protocol} onValueChange={(v) => { setProtocol(v ?? 'TCP'); if (!protocolNeedsPort(v ?? 'TCP')) setPort(''); }}>
               <SelectTrigger className="w-full">
                 <SelectValue>{protocol}</SelectValue>
@@ -219,7 +225,7 @@ export function ServiceModal({
                 <SelectItem value="GRE">GRE</SelectItem>
                 <SelectItem value="IGMP">IGMP</SelectItem>
                 <Separator className="my-1" />
-                <SelectItem value="ALL">ALL (tutti)</SelectItem>
+                <SelectItem value="ALL">{t('allProtocols')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -234,11 +240,11 @@ export function ServiceModal({
           >
             <div className="overflow-hidden">
               <div className="space-y-2">
-                <Label htmlFor="svc-port">Porta</Label>
+                <Label htmlFor="svc-port">{t('portLabel')}</Label>
                 <Input
                   id="svc-port"
                   type="number"
-                  placeholder="es. 22"
+                  placeholder={t('placeholderPort')}
                   value={port}
                   onChange={(e) => setPort(e.target.value)}
                   required={protocolNeedsPort(protocol)}
@@ -248,10 +254,10 @@ export function ServiceModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="svc-ip">IP Destinazione</Label>
+            <Label htmlFor="svc-ip">{t('targetIp')}</Label>
             <Input
               id="svc-ip"
-              placeholder="es. 192.168.1.50"
+              placeholder={t('placeholderIp')}
               value={targetIp}
               onChange={(e) => setTargetIp(e.target.value)}
               required
@@ -259,10 +265,10 @@ export function ServiceModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="svc-domain">Dominio <span className="text-zinc-500 font-normal">(opzionale)</span></Label>
+            <Label htmlFor="svc-domain">{t('domain')} <span className="text-zinc-500 font-normal">{t('optional')}</span></Label>
             <Input
               id="svc-domain"
-              placeholder="es. drive.netrod.xyz"
+              placeholder={t('placeholderDomain')}
               value={domain}
               onChange={(e) => setDomain(e.target.value)}
             />
@@ -275,10 +281,10 @@ export function ServiceModal({
               </div>
               <div>
                 <Label htmlFor="svc-global" className="text-sm font-medium text-zinc-200 cursor-pointer">
-                  Servizio Globale
+                  {t('globalFlag')}
                 </Label>
                 <p className="text-xs text-zinc-500 mt-0.5">
-                  Verrà aggiunto al firewall di tutti i peer in ALLOW
+                  {t('globalFlagDesc')}
                 </p>
               </div>
             </div>
@@ -296,11 +302,11 @@ export function ServiceModal({
               onClick={() => onOpenChange(false)}
               disabled={isLoading}
             >
-              Annulla
+              {tDialogs('cancel')}
             </Button>
             <Button type="submit" disabled={isLoading || !name.trim() || (protocolNeedsPort(protocol) && !port) || !targetIp.trim()}>
               {isLoading && <Loader2 className="size-4 animate-spin" />}
-              Crea
+              {tCommon('create')}
             </Button>
           </DialogFooter>
         </form>

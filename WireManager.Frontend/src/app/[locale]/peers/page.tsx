@@ -1,4 +1,6 @@
 "use client";
+import { useTranslations } from "next-intl";
+
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
@@ -86,6 +88,9 @@ function getExpireUrgency(expireAt: string): { color: string; label: string } {
 }
 
 export default function PeersPage() {
+  const tPeers = useTranslations("Peers");
+  const tCommon = useTranslations("Common");
+
   const [peers, setPeers] = useState<ConfPeer[]>([]);
   const [servers, setServers] = useState<ConfServer[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
@@ -115,7 +120,7 @@ export default function PeersPage() {
   const [deleteTarget, setDeleteTarget] = useState<ConfPeer | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // QR Code dialog state
+  // {tPeers("qrCode")} dialog state
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [qrPeerName, setQrPeerName] = useState("");
@@ -223,7 +228,7 @@ export default function PeersPage() {
     } catch (error) {
       toast.error(
         `Errore durante l'aggiornamento dello stato: ${
-          error instanceof ApiClientError ? error.message : "Errore sconosciuto"
+          error instanceof ApiClientError ? error.message : tPeers("unknownError")
         }`
       );
     }
@@ -275,7 +280,7 @@ export default function PeersPage() {
       await fetchData();
     } catch (err) {
       const message =
-        err instanceof ApiClientError ? err.message : "Errore salvataggio peer";
+        err instanceof ApiClientError ? err.message : tPeers("saveError");
       toast.error(message);
     }
   }
@@ -291,7 +296,7 @@ export default function PeersPage() {
       await fetchData();
     } catch (err) {
       const message =
-        err instanceof ApiClientError ? err.message : "Errore eliminazione peer";
+        err instanceof ApiClientError ? err.message : tPeers("deleteError");
       toast.error(message);
     } finally {
       setIsDeleting(false);
@@ -311,17 +316,17 @@ export default function PeersPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success("Configurazione scaricata");
+      toast.success(tPeers("confDownloaded"));
     } catch (err) {
       const message =
         err instanceof ApiClientError
           ? err.message
-          : "Errore download configurazione";
+          : tPeers("confDownloadError");
       toast.error(message);
     }
   }
 
-  // ─── QR Code ──────────────────────────────────────────────────────────
+  // ─── {tPeers("qrCode")} ──────────────────────────────────────────────────────────
   async function handleShowQrCode(peer: ConfPeer) {
     try {
       const url = await getPeerQrCodeUrl(peer.id);
@@ -332,7 +337,7 @@ export default function PeersPage() {
       const message =
         err instanceof ApiClientError
           ? err.message
-          : "Errore generazione QR Code";
+          : tPeers("qrCodeError");
       toast.error(message);
     }
   }
@@ -347,14 +352,14 @@ export default function PeersPage() {
               Peers
             </h1>
             <p className="mt-1 text-sm text-zinc-400">
-              Gestisci i client WireGuard
+              {tPeers("manageClients")}
             </p>
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <div className="relative w-full sm:w-[250px]">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
               <Input
-                placeholder="Cerca peer..."
+                placeholder={tPeers("searchPeer")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-9 border-zinc-700 bg-zinc-800/50 w-full"
@@ -365,14 +370,14 @@ export default function PeersPage() {
                 id="peer-filter-server"
                 className="w-full sm:w-[200px] border-zinc-700 bg-zinc-800/50"
               >
-                <SelectValue placeholder="Filtra per server">
+                <SelectValue placeholder={tPeers("filterByServer")}>
                   {filterServerId === "all"
-                    ? "Tutti i Server"
-                    : servers.find((s) => String(s.id) === filterServerId)?.endPoint || "Filtra per server"}
+                    ? tPeers("allServers")
+                    : servers.find((s) => String(s.id) === filterServerId)?.endPoint || tPeers("filterByServer")}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tutti i Server</SelectItem>
+                <SelectItem value="all">{tPeers("allServers")}</SelectItem>
                 {servers.map((s) => (
                   <SelectItem key={s.id} value={String(s.id)}>
                     {s.endPoint}
@@ -387,7 +392,7 @@ export default function PeersPage() {
               className="bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-500 hover:to-blue-600 shadow-lg shadow-blue-600/20 w-full sm:w-auto"
             >
               <Plus className="mr-2 h-4 w-4" />
-              Aggiungi Peer
+              {tPeers("addPeer")}
             </Button>
           </div>
         </div>
@@ -416,8 +421,8 @@ export default function PeersPage() {
             <Users className="h-12 w-12 text-zinc-700" />
             <p className="mt-4 text-sm text-zinc-500">
               {peers.length === 0
-                ? "Nessun peer configurato"
-                : "Nessun peer per questo server"}
+                ? tPeers("noPeersConfigured")
+                : tPeers("noPeersForServer")}
             </p>
             {peers.length === 0 && (
               <Button
@@ -467,16 +472,16 @@ export default function PeersPage() {
                         <CardContent className="flex-1 space-y-4 pb-3">
                           <div className="grid grid-cols-2 gap-2 text-sm text-zinc-400 bg-zinc-800/30 p-2.5 rounded-lg border border-zinc-800/50">
                             <div className="min-w-0">
-                              <span className="block text-xs text-zinc-500 mb-0.5">DNS</span>
+                              <span className="block text-xs text-zinc-500 mb-0.5">{tPeers("dns")}</span>
                               <span className="font-mono text-zinc-300 truncate block">{peer.dnsAddress}</span>
                             </div>
                             <div className="min-w-0">
-                              <span className="block text-xs text-zinc-500 mb-0.5">Server</span>
+                              <span className="block text-xs text-zinc-500 mb-0.5">{tPeers("server")}</span>
                               <span className="text-zinc-300 truncate block">{server?.endPoint ?? "—"}</span>
                             </div>
                           </div>
                           <div>
-                            <span className="block text-xs text-zinc-500 mb-1.5">Tags</span>
+                            <span className="block text-xs text-zinc-500 mb-1.5">{tPeers("tags")}</span>
                             <div className="flex flex-wrap gap-1.5">
                               {peerTags.length > 0 ? (
                                 peerTags.map(tag => (
@@ -503,13 +508,13 @@ export default function PeersPage() {
                           <Button variant="outline" size="icon-sm" className="bg-zinc-800/50 hover:bg-zinc-800 border-zinc-700" onClick={() => handleDownloadConf(peer)} title="Download .conf">
                             <Download className="h-4 w-4 text-zinc-400" />
                           </Button>
-                          <Button variant="outline" size="icon-sm" className="bg-zinc-800/50 hover:bg-zinc-800 border-zinc-700" onClick={() => handleShowQrCode(peer)} title="QR Code">
+                          <Button variant="outline" size="icon-sm" className="bg-zinc-800/50 hover:bg-zinc-800 border-zinc-700" onClick={() => handleShowQrCode(peer)} title={tPeers("qrCode")}>
                             <QrCode className="h-4 w-4 text-zinc-400" />
                           </Button>
-                          <Button variant="outline" size="icon-sm" className="bg-zinc-800/50 hover:bg-zinc-800 border-zinc-700" onClick={() => handleOpenEdit(peer)} title="Modifica">
+                          <Button variant="outline" size="icon-sm" className="bg-zinc-800/50 hover:bg-zinc-800 border-zinc-700" onClick={() => handleOpenEdit(peer)} title={tCommon("edit")}>
                             <Pencil className="h-4 w-4 text-zinc-400" />
                           </Button>
-                          <Button variant="outline" size="icon-sm" className="bg-zinc-800/50 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 border-zinc-700" onClick={() => setDeleteTarget(peer)} title="Elimina">
+                          <Button variant="outline" size="icon-sm" className="bg-zinc-800/50 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 border-zinc-700" onClick={() => setDeleteTarget(peer)} title={tCommon("delete")}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </CardFooter>
@@ -523,15 +528,15 @@ export default function PeersPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="border-zinc-800 hover:bg-transparent">
-                    <TableHead className="text-zinc-400">Nome Client</TableHead>
-                    <TableHead className="text-zinc-400">IP</TableHead>
-                    <TableHead className="text-zinc-400">DNS</TableHead>
+                    <TableHead className="text-zinc-400">{tPeers("clientName")}</TableHead>
+                    <TableHead className="text-zinc-400">{tPeers("ip")}</TableHead>
+                    <TableHead className="text-zinc-400">{tPeers("dns")}</TableHead>
                     <TableHead className="text-zinc-400">Allowed IPs</TableHead>
-                    <TableHead className="text-zinc-400">Server</TableHead>
-                    <TableHead className="text-zinc-400 w-[1%] whitespace-nowrap">Tags</TableHead>
-                    <TableHead className="text-zinc-400 w-[1%] whitespace-nowrap text-center">Stato</TableHead>
+                    <TableHead className="text-zinc-400">{tPeers("server")}</TableHead>
+                    <TableHead className="text-zinc-400 w-[1%] whitespace-nowrap">{tPeers("tags")}</TableHead>
+                    <TableHead className="text-zinc-400 w-[1%] whitespace-nowrap text-center">{tPeers("status")}</TableHead>
                     <TableHead className="w-14 text-right text-zinc-400">
-                      Azioni
+                      {tPeers("actions")}
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -648,26 +653,26 @@ export default function PeersPage() {
                                 onClick={() => handleDownloadConf(peer)}
                               >
                                 <Download className="mr-2 h-4 w-4" />
-                                Download .conf
+                                {tPeers("downloadConf")}
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => handleShowQrCode(peer)}
                               >
                                 <QrCode className="mr-2 h-4 w-4" />
-                                QR Code
+                                {tPeers("qrCode")}
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => handleOpenEdit(peer)}
                               >
                                 <Pencil className="mr-2 h-4 w-4" />
-                                Modifica
+                                {tCommon("edit")}
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="text-red-400 focus:text-red-400"
                                 onClick={() => setDeleteTarget(peer)}
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
-                                Elimina
+                                {tCommon("delete")}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -683,7 +688,7 @@ export default function PeersPage() {
             {/* Pagination Bar */}
             <div className="flex items-center justify-between border-t border-zinc-800 pt-4">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-zinc-400">Righe per pagina:</span>
+                <span className="text-sm text-zinc-400">{tPeers("rowsPerPage")}</span>
                 <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
                   <SelectTrigger className="w-[70px] h-8 border-zinc-700 bg-zinc-800/50 text-sm">
                     <SelectValue />
@@ -699,9 +704,9 @@ export default function PeersPage() {
 
               <div className="text-sm text-zinc-400">
                 {totalCount !== null ? (
-                  `Pagina ${currentPage} di ${Math.max(1, Math.ceil(totalCount / pageSize))} (${totalCount} risultati)`
+                  tPeers("paginationTotal", { page: currentPage, totalPages: Math.max(1, Math.ceil(totalCount / pageSize)), total: totalCount })
                 ) : (
-                  `Pagina ${currentPage}`
+                  tPeers("pagination", { page: currentPage })
                 )}
               </div>
 
@@ -714,7 +719,7 @@ export default function PeersPage() {
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 >
                   <ChevronLeft className="h-4 w-4 mr-1" />
-                  Precedente
+                  {tPeers("previous")}
                 </Button>
                 <Button
                   variant="outline"
@@ -723,7 +728,7 @@ export default function PeersPage() {
                   disabled={totalCount !== null ? currentPage >= Math.ceil(totalCount / pageSize) : peers.length < pageSize}
                   onClick={() => setCurrentPage((p) => p + 1)}
                 >
-                  Avanti
+                  {tPeers("next")}
                   <ChevronRight className="h-4 w-4 ml-1" />
                 </Button>
               </div>
@@ -748,9 +753,9 @@ export default function PeersPage() {
         onOpenChange={(open) => {
           if (!open) setDeleteTarget(null);
         }}
-        title="Elimina Peer"
-        description={`Sei sicuro di voler eliminare il peer "${deleteTarget?.clientName ?? ""}"? Questa azione è irreversibile.`}
-        confirmLabel="Elimina"
+        title={tPeers("deletePeerTitle")}
+        description={tPeers("deleteConfirmDesc", { name: deleteTarget?.clientName ?? "" })}
+        confirmLabel={tCommon("delete")}
         loading={isDeleting}
         onConfirm={handleConfirmDelete}
       />

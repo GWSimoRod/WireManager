@@ -1,4 +1,6 @@
 "use client";
+import { useTranslations } from "next-intl";
+
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
@@ -344,7 +346,7 @@ function UsageChart({ data: propData }: { data: ChartDataPoint[] }) {
   );
 }
 
-// ─── Main Component ─────────────────────────────────────────────────
+// ─── {tPeers("never")}n Component ─────────────────────────────────────────────────
 interface PeerDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -358,6 +360,8 @@ export function PeerDetailDialog({
   peerId,
   serverMap,
 }: PeerDetailDialogProps) {
+  const tPeers = useTranslations("Peers");
+  const tCommon = useTranslations("Common");
   const [peer, setPeer] = useState<ConfPeer | null>(null);
   const [stats, setStats] = useState<PeerUsageHistory[]>([]);
   const [liveStats, setLiveStats] = useState<PeerLiveStats | null>(null);
@@ -511,7 +515,7 @@ export function PeerDetailDialog({
             <div className="space-y-2.5">
               <div className="grid grid-cols-3 gap-2.5">
                 <InfoCard icon={<Network className="h-4 w-4 text-blue-400" />} label="Indirizzo" value={peer.address} />
-                <InfoCard icon={<Globe className="h-4 w-4 text-violet-400" />} label="DNS" value={peer.dnsAddress} />
+                <InfoCard icon={<Globe className="h-4 w-4 text-violet-400" />} label={tPeers("dns")} value={peer.dnsAddress} />
                 <InfoCard icon={<Server className="h-4 w-4 text-teal-400" />} label="Server" value={server?.endPoint ?? "—"} />
               </div>
               <div className="grid grid-cols-2 gap-2.5">

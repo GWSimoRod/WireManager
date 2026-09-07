@@ -18,9 +18,14 @@ import {
   ApiClientError,
 } from "@/lib/api-client";
 import type { ConfServer, ServerRequestDTO } from "@/lib/types";
+import { useTranslations } from "next-intl";
 
 export default function DashboardPage() {
   const { userRole } = useAuth();
+  const tDashboard = useTranslations("Dashboard");
+  const tServers = useTranslations("Servers");
+  const tCommon = useTranslations("Common");
+
   const [servers, setServers] = useState<ConfServer[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -38,12 +43,12 @@ export default function DashboardPage() {
       setServers(data);
     } catch (err) {
       const message =
-        err instanceof ApiClientError ? err.message : "Errore caricamento server";
+        err instanceof ApiClientError ? err.message : tServers("loadError");
       toast.error(message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [tServers]);
 
   useEffect(() => {
     fetchServers();
@@ -64,17 +69,17 @@ export default function DashboardPage() {
     try {
       if (editingServer) {
         await updateServer(editingServer.id, data);
-        toast.success("Server aggiornato");
+        toast.success(tServers("updated"));
       } else {
         await createServer(data);
-        toast.success("Server creato");
+        toast.success(tServers("created"));
       }
       setDialogOpen(false);
       setEditingServer(null);
       await fetchServers();
     } catch (err) {
       const message =
-        err instanceof ApiClientError ? err.message : "Errore salvataggio server";
+        err instanceof ApiClientError ? err.message : tServers("saveError");
       toast.error(message);
     }
   }
@@ -85,12 +90,12 @@ export default function DashboardPage() {
     setIsDeleting(true);
     try {
       await deleteServer(deleteTarget.id);
-      toast.success("Server eliminato");
+      toast.success(tServers("deleted"));
       setDeleteTarget(null);
       await fetchServers();
     } catch (err) {
       const message =
-        err instanceof ApiClientError ? err.message : "Errore eliminazione server";
+        err instanceof ApiClientError ? err.message : tServers("deleteError");
       toast.error(message);
     } finally {
       setIsDeleting(false);
@@ -101,12 +106,12 @@ export default function DashboardPage() {
   async function handleSync(server: ConfServer) {
     try {
       await syncServer(server.id);
-      toast.success(`Server ${server.endPoint} sincronizzato`);
+      toast.success(tServers("synced", { endpoint: server.endPoint }));
     } catch (err) {
       const message =
         err instanceof ApiClientError
           ? err.message
-          : "Errore sincronizzazione server";
+          : tServers("syncError");
       toast.error(message);
     }
   }
@@ -118,10 +123,10 @@ export default function DashboardPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-zinc-100">
-              Dashboard
+              {tDashboard("title")}
             </h1>
             <p className="mt-1 text-sm text-zinc-400">
-              Gestisci i tuoi server WireGuard
+              {tDashboard("subtitle")}
             </p>
           </div>
           {userRole === "Admin" && (
@@ -131,7 +136,7 @@ export default function DashboardPage() {
               className="bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-500 hover:to-blue-600 shadow-lg shadow-blue-600/20 w-full sm:w-auto"
             >
               <Plus className="mr-2 h-4 w-4" />
-              Aggiungi Server
+              {tDashboard("addServer")}
             </Button>
           )}
         </div>
@@ -141,9 +146,9 @@ export default function DashboardPage() {
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-red-500/10">
               <ShieldAlert className="h-8 w-8 text-red-500" />
             </div>
-            <h2 className="mt-4 text-lg font-semibold text-zinc-100">Accesso Negato</h2>
+            <h2 className="mt-4 text-lg font-semibold text-zinc-100">{tCommon("accessDenied")}</h2>
             <p className="mt-2 text-sm text-zinc-400 max-w-sm text-center">
-              Non hai i permessi necessari per visualizzare questa pagina.
+              {tCommon("noPermissions")}
             </p>
           </div>
         ) : (
@@ -162,7 +167,7 @@ export default function DashboardPage() {
               <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-800 bg-zinc-900/30 py-20">
                 <Server className="h-12 w-12 text-zinc-700" />
                 <p className="mt-4 text-sm text-zinc-500">
-                  Nessun server configurato
+                  {tDashboard("noServers")}
                 </p>
                 <Button
                   variant="outline"
@@ -170,7 +175,7 @@ export default function DashboardPage() {
                   onClick={handleOpenCreate}
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  Aggiungi il primo server
+                  {tDashboard("addFirstServer")}
                 </Button>
               </div>
             ) : (
@@ -208,9 +213,9 @@ export default function DashboardPage() {
         onOpenChange={(open) => {
           if (!open) setDeleteTarget(null);
         }}
-        title="Elimina Server"
-        description={`Sei sicuro di voler eliminare il server "${deleteTarget?.endPoint ?? ""}"? Questa azione è irreversibile.`}
-        confirmLabel="Elimina"
+        title={tServers("deleteTitle")}
+        description={tServers("deleteConfirm", { endpoint: deleteTarget?.endPoint ?? "" })}
+        confirmLabel={tCommon("delete")}
         loading={isDeleting}
         onConfirm={handleConfirmDelete}
       />

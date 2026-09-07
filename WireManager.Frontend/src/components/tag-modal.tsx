@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Loader2, Palette } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import type { CreateTagPayload, Service, Tag } from '@/lib/types'
 import {
   Dialog,
@@ -37,6 +38,9 @@ export function TagModal({
   tag,
   onSave,
 }: TagModalProps) {
+  const t = useTranslations('Tags')
+  const tCommon = useTranslations('Common')
+  
   const [isLoading, setIsLoading] = useState(false)
   const [name, setName] = useState('')
   const [color, setColor] = useState('#3B82F6')
@@ -91,20 +95,20 @@ export function TagModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full max-w-full sm:max-w-md h-[100dvh] sm:h-auto max-h-[100dvh] sm:max-h-[90vh] rounded-none sm:rounded-xl overflow-y-auto p-4 sm:p-6 border-0 sm:border">
         <DialogHeader>
-          <DialogTitle>{isEditing ? 'Modifica Tag' : 'Nuovo Tag'}</DialogTitle>
+          <DialogTitle>{isEditing ? t('editTag') : t('newTag')}</DialogTitle>
           <DialogDescription>
             {isEditing
-              ? 'Modifica nome, colore e servizi associati al tag.'
-              : 'Crea un nuovo tag per raggruppare i servizi.'}
+              ? t('editTagDesc')
+              : t('newTagDesc')}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="tag-name">Nome</Label>
+            <Label htmlFor="tag-name">{tCommon('name')}</Label>
             <Input
               id="tag-name"
-              placeholder="es. Backend Servers"
+              placeholder={t('placeholderName')}
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -114,7 +118,7 @@ export function TagModal({
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <Palette className="size-4 text-zinc-500" />
-              Colore
+              {t('color')}
             </Label>
             <div className="flex flex-wrap gap-2">
               {PRESET_COLORS.map((c) => (
@@ -147,7 +151,7 @@ export function TagModal({
 
           {services.length > 0 && (
             <div className="space-y-2">
-              <Label>Servizi Associati (opzionale)</Label>
+              <Label>{t('associatedServicesOptional')}</Label>
               <div className="max-h-36 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-900/50 p-2 space-y-1">
                 {services.map((svc) => {
                   const checked = selectedServices.includes(svc.id)
@@ -193,11 +197,11 @@ export function TagModal({
               onClick={() => onOpenChange(false)}
               disabled={isLoading}
             >
-              Annulla
+              {tCommon('cancel')}
             </Button>
             <Button type="submit" disabled={isLoading || !name.trim()}>
               {isLoading && <Loader2 className="size-4 animate-spin" />}
-              {isEditing ? 'Salva' : 'Crea'}
+              {isEditing ? tCommon('save') : tCommon('create')}
             </Button>
           </DialogFooter>
         </form>

@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { useTranslations } from 'next-intl'
 
 interface ConfirmDialogProps {
   open: boolean
@@ -30,9 +31,10 @@ export function ConfirmDialog({
   description,
   onConfirm,
   variant = 'default',
-  confirmLabel = 'Conferma',
+  confirmLabel,
   loading,
 }: ConfirmDialogProps) {
+  const t = useTranslations('Dialogs')
   const [internalLoading, setInternalLoading] = useState(false)
   const isLoading = loading !== undefined ? loading : internalLoading
 
@@ -62,7 +64,7 @@ export function ConfirmDialog({
             onClick={() => onOpenChange(false)}
             disabled={isLoading}
           >
-            Annulla
+            {t('cancel')}
           </Button>
           <Button
             variant={variant}
@@ -70,7 +72,7 @@ export function ConfirmDialog({
             disabled={isLoading}
           >
             {isLoading && <Loader2 className="size-4 animate-spin" />}
-            {confirmLabel}
+            {confirmLabel || t('confirm')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from "next-intl";
+
 import {
   Dialog,
   DialogContent,
@@ -21,13 +23,15 @@ export function QrCodeDialog({
   qrCodeUrl,
   peerName,
 }: QrCodeDialogProps) {
+  const tPeers = useTranslations("Peers");
+  const tCommon = useTranslations("Common");
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>QR Code</DialogTitle>
+          <DialogTitle>{tPeers("qrCodeTitle")}</DialogTitle>
           <DialogDescription>
-            Configurazione per <strong>{peerName}</strong>
+            {tPeers("qrCodeConfigFor")} <strong>{peerName}</strong>
           </DialogDescription>
         </DialogHeader>
 
@@ -35,12 +39,12 @@ export function QrCodeDialog({
           {qrCodeUrl ? (
             <img
               src={qrCodeUrl}
-              alt={`QR code per ${peerName}`}
+              alt={`QR code ${peerName}`}
               className="size-full max-w-[256px] rounded-lg"
             />
           ) : (
             <p className="text-center text-sm text-zinc-500">
-              Nessun QR code disponibile
+              {tPeers("noQrCode")}
             </p>
           )}
         </div>

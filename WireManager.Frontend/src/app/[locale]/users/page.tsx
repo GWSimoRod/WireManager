@@ -26,11 +26,7 @@ import { AuthenticatedLayout } from "@/components/authenticated-layout";
 import { useAuth } from "@/lib/auth-context";
 import { createUser, getAllUsers, deleteUser, updateUserRole, ApiClientError } from "@/lib/api-client";
 import type { UserInfo } from "@/lib/types";
-
-const ROLES = [
-  { value: "Admin", label: "Admin", description: "Accesso completo al sistema" },
-  { value: "Operator", label: "Operatore", description: "Gestione peer e server" },
-] as const;
+import { useTranslations } from "next-intl";
 
 const roleBadgeColors: Record<string, string> = {
   Admin: "bg-red-500/15 text-red-400 border-red-500/20",
@@ -38,6 +34,14 @@ const roleBadgeColors: Record<string, string> = {
 };
 
 export default function UsersPage() {
+  const tUsers = useTranslations("Users");
+  const tCommon = useTranslations("Common");
+  const tAuth = useTranslations("Auth");
+
+  const ROLES = [
+    { value: "Admin", label: tUsers("admin"), description: tUsers("adminDesc") },
+    { value: "Operator", label: tUsers("operator"), description: tUsers("operatorDesc") },
+  ] as const;
   const { userRole, username: currentUser } = useAuth();
 
   const [username, setUsername] = useState("");
@@ -113,7 +117,7 @@ export default function UsersPage() {
       setUsers(finalUsers);
       setTotalCount(finalTotalCount);
     } catch (err) {
-      toast.error("Impossibile caricare la lista utenti");
+      toast.error(tUsers("loadError"));
     } finally {
       setIsLoadingUsers(false);
     }
@@ -125,15 +129,15 @@ export default function UsersPage() {
 
   function validate(): boolean {
     if (username.trim().length < 3) {
-      toast.error("L'username deve avere almeno 3 caratteri");
+      toast.error(tUsers("usernameLengthError"));
       return false;
     }
     if (password.length < 6) {
-      toast.error("La password deve avere almeno 6 caratteri");
+      toast.error(tUsers("passwordLengthError"));
       return false;
     }
     if (!role) {
-      toast.error("Seleziona un ruolo");
+      toast.error(tUsers("roleRequired"));
       return false;
     }
     return true;
@@ -150,7 +154,7 @@ export default function UsersPage() {
         Password: password,
         Role: role,
       });
-      toast.success(`Account "${username.trim()}" creato con successo`);
+      toast.success(tUsers("created", { username: username.trim() }));
       setUsername("");
       setPassword("");
       setRole("Operator");
@@ -159,7 +163,7 @@ export default function UsersPage() {
       const message =
         err instanceof ApiClientError
           ? err.message
-          : "Errore durante la creazione dell'account";
+          : tUsers("createError");
       toast.error(message);
     } finally {
       setIsSubmitting(false);
@@ -167,31 +171,31 @@ export default function UsersPage() {
   }
 
   async function handleDelete(uuid: string, username: string) {
-    if (!confirm(`Sei sicuro di voler eliminare l'account "${username}"?`)) return;
+    if (!confirm(tUsers("deleteConfirm", { username }))) return;
     try {
       await deleteUser(uuid);
-      toast.success(`Account "${username}" eliminato con successo`);
+      toast.success(tUsers("deleted", { username }));
       await fetchUsers(); // Refresh the list
     } catch (err) {
       const message =
         err instanceof ApiClientError
           ? err.message
-          : "Errore durante l'eliminazione dell'account";
+          : tUsers("deleteError");
       toast.error(message);
     }
   }
 
   async function handleRoleChange(uuid: string, username: string, newRole: string) {
-    if (!confirm(`Sei sicuro di voler cambiare il ruolo di "${username}" in ${newRole}?`)) return;
+    if (!confirm(tUsers("changeRoleConfirm", { username, role: newRole }))) return;
     try {
       await updateUserRole(uuid, newRole);
-      toast.success(`Ruolo di "${username}" aggiornato in ${newRole}`);
+      toast.success(tUsers("roleChanged", { username, role: newRole }));
       await fetchUsers(); // Refresh the list
     } catch (err) {
       const message =
         err instanceof ApiClientError
           ? err.message
-          : "Errore durante l'aggiornamento del ruolo";
+          : tUsers("changeRoleError");
       toast.error(message);
     }
   }
@@ -202,10 +206,10 @@ export default function UsersPage() {
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-100">
-            Gestione Utenti
+            {tUsers("title")}
           </h1>
           <p className="mt-1 text-sm text-zinc-400">
-            Crea e gestisci gli account per accedere a WireManager
+            {tUsers("subtitle")}
           </p>
         </div>
 
@@ -216,10 +220,10 @@ export default function UsersPage() {
               <ShieldAlert className="h-8 w-8 text-red-400" />
             </div>
             <p className="mt-4 text-sm font-medium text-zinc-300">
-              Accesso Negato
+              {tCommon("accessDenied")}
             </p>
             <p className="mt-1 text-xs text-zinc-500">
-              Solo gli amministratori possono gestire gli utenti
+              {tUsers("adminOnly")}
             </p>
           </div>
         ) : (
@@ -236,10 +240,10 @@ export default function UsersPage() {
                   </div>
                   <div>
                     <h2 className="text-lg font-semibold text-zinc-100">
-                      Nuovo Account
+                      {tUsers("newAccount")}
                     </h2>
                     <p className="text-xs text-zinc-400">
-                      Compila i campi per creare un nuovo utente
+                      {tUsers("newAccountDesc")}
                     </p>
                   </div>
                 </div>
@@ -251,14 +255,14 @@ export default function UsersPage() {
                       htmlFor="create-username"
                       className="text-xs text-zinc-400 mb-1.5 block"
                     >
-                      Username
+                      {tAuth("username")}
                     </Label>
                     <div className="relative">
                       <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
                       <Input
                         id="create-username"
                         type="text"
-                        placeholder="nome_utente"
+                        placeholder={tAuth("username")}
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         className="pl-10 bg-zinc-800/50 border-zinc-700 placeholder:text-zinc-600 focus:border-blue-500 focus:ring-blue-500/20"
@@ -274,14 +278,14 @@ export default function UsersPage() {
                       htmlFor="create-password"
                       className="text-xs text-zinc-400 mb-1.5 block"
                     >
-                      Password
+                      {tAuth("password")}
                     </Label>
                     <div className="relative">
                       <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
                       <Input
                         id="create-password"
                         type={showPassword ? "text" : "password"}
-                        placeholder="Minimo 6 caratteri"
+                        placeholder={tUsers("passwordLengthError")}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         className="pl-10 pr-10 bg-zinc-800/50 border-zinc-700 placeholder:text-zinc-600 focus:border-blue-500 focus:ring-blue-500/20"
@@ -306,7 +310,7 @@ export default function UsersPage() {
                   {/* Role */}
                   <div>
                     <Label className="text-xs text-zinc-400 mb-1.5 block">
-                      Ruolo
+                      {tUsers("role")}
                     </Label>
                     <div className="relative">
                       <button
@@ -317,7 +321,7 @@ export default function UsersPage() {
                       >
                         <div className="flex items-center gap-2">
                           <Shield className="h-4 w-4 text-zinc-500" />
-                          <span>{ROLES.find((r) => r.value === role)?.label ?? "Seleziona ruolo"}</span>
+                          <span>{ROLES.find((r) => r.value === role)?.label ?? tUsers("selectRole")}</span>
                           <Badge
                             variant="outline"
                             className={`text-[10px] px-1.5 py-0 ${roleBadgeColors[role] || ""}`}
@@ -380,12 +384,12 @@ export default function UsersPage() {
                     {isSubmitting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creazione in corso…
+                        {tUsers("creating")}
                       </>
                     ) : (
                       <>
                         <UserPlus className="mr-2 h-4 w-4" />
-                        Crea Account
+                        {tUsers("createAccount")}
                       </>
                     )}
                   </Button>
@@ -403,10 +407,10 @@ export default function UsersPage() {
                     </div>
                     <div>
                       <h2 className="text-lg font-semibold text-zinc-100">
-                        Utenti Registrati
+                        {tUsers("registeredUsers")}
                       </h2>
                       <p className="text-xs text-zinc-400">
-                        {users.length} account presenti nel sistema
+                        {tUsers("totalAccounts", { count: users.length })}
                       </p>
                     </div>
                   </div>
@@ -416,7 +420,7 @@ export default function UsersPage() {
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
                     <Input
                       type="text"
-                      placeholder="Cerca utente..."
+                      placeholder={tUsers("searchUser")}
                       value={searchQuery}
                       onChange={(e) => {
                         setSearchQuery(e.target.value);
@@ -436,7 +440,7 @@ export default function UsersPage() {
                     <div className="flex flex-col items-center justify-center py-16 text-center">
                       <Users className="h-10 w-10 text-zinc-600 mb-3" />
                       <p className="text-sm font-medium text-zinc-300">
-                        {searchQuery ? "Nessun utente trovato con questo nome" : "Nessun utente presente"}
+                        {searchQuery ? tUsers("noUserFound") : tUsers("noUsers")}
                       </p>
                     </div>
                   ) : (
@@ -469,7 +473,7 @@ export default function UsersPage() {
                                   variant="secondary"
                                   className="bg-blue-500/10 text-[10px] text-blue-400 hover:bg-blue-500/10"
                                 >
-                                  Tu
+                                  {tUsers("you")}
                                 </Badge>
                               )}
                             </div>
@@ -504,7 +508,7 @@ export default function UsersPage() {
                             <button
                               onClick={() => handleDelete(user.uuid, user.username)}
                               className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-red-500/10 hover:text-red-400"
-                              title="Elimina account"
+                              title={tUsers("deleteAccount")}
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
@@ -523,9 +527,9 @@ export default function UsersPage() {
                   <div className="mt-4 flex items-center justify-between border-t border-zinc-800 pt-4">
                     <p className="text-xs text-zinc-400">
                       {totalCount !== null ? (
-                        `Pagina ${currentPage} di ${Math.max(1, Math.ceil(totalCount / pageSize))} (${totalCount} utenti)`
+                        tUsers("paginationTotal", { page: currentPage, totalPages: Math.max(1, Math.ceil(totalCount / pageSize)), total: totalCount })
                       ) : (
-                        `Pagina ${currentPage}`
+                        tUsers("pagination", { page: currentPage })
                       )}
                     </p>
                     <div className="flex items-center gap-2">
@@ -536,7 +540,7 @@ export default function UsersPage() {
                         disabled={currentPage === 1}
                         className="h-8 w-8 p-0 border-zinc-700 bg-zinc-800/50 hover:bg-zinc-700 text-zinc-300 disabled:opacity-50"
                       >
-                        <span className="sr-only">Precedente</span>
+                        <span className="sr-only">{tUsers("previous")}</span>
                         <ChevronLeft className="h-4 w-4" />
                       </Button>
                       <Button
@@ -546,7 +550,7 @@ export default function UsersPage() {
                         disabled={totalCount !== null ? currentPage >= Math.ceil(totalCount / pageSize) : users.length < pageSize}
                         className="h-8 w-8 p-0 border-zinc-700 bg-zinc-800/50 hover:bg-zinc-700 text-zinc-300 disabled:opacity-50"
                       >
-                        <span className="sr-only">Successivo</span>
+                        <span className="sr-only">{tUsers("next")}</span>
                         <ChevronRight className="h-4 w-4" />
                       </Button>
                     </div>

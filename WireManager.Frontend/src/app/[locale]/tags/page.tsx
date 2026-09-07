@@ -1,4 +1,6 @@
 "use client";
+import { useTranslations } from "next-intl";
+
 
 import { useState, useEffect, useCallback } from "react";
 import { Plus, Tags as TagsIcon, Trash2, Pencil, Server, MoreHorizontal } from "lucide-react";
@@ -42,6 +44,9 @@ import {
 import type { Tag, Service, CreateTagPayload } from "@/lib/types";
 
 export default function TagsPage() {
+  const tTags = useTranslations("Tags");
+  const tCommon = useTranslations("Common");
+
   const { userRole } = useAuth();
   const [tags, setTags] = useState<Tag[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -71,7 +76,7 @@ export default function TagsPage() {
       setServices(servicesData);
     } catch (err) {
       const message =
-        err instanceof ApiClientError ? err.message : "Errore caricamento dati";
+        err instanceof ApiClientError ? err.message : tTags("loadError");
       toast.error(message);
     } finally {
       setLoading(false);
@@ -96,16 +101,16 @@ export default function TagsPage() {
     try {
       if (editingTag) {
         await updateTag(editingTag.id, data);
-        toast.success("Tag aggiornato");
+        toast.success(tTags("updated"));
       } else {
         await createTag(data);
-        toast.success("Tag creato");
+        toast.success(tTags("created"));
       }
       setEditingTag(null);
       await fetchData();
     } catch (err) {
       const message =
-        err instanceof ApiClientError ? err.message : "Errore salvataggio tag";
+        err instanceof ApiClientError ? err.message : tTags("saveError");
       toast.error(message);
       throw err;
     }
@@ -115,12 +120,12 @@ export default function TagsPage() {
     if (!deleteTarget) return;
     try {
       await deleteTag(deleteTarget.id);
-      toast.success("Tag eliminato");
+      toast.success(tTags("deleted"));
       setDeleteTarget(null);
       await fetchData();
     } catch (err) {
       const message =
-        err instanceof ApiClientError ? err.message : "Errore eliminazione tag";
+        err instanceof ApiClientError ? err.message : tTags("deleteError");
       toast.error(message);
     }
   }
@@ -135,7 +140,7 @@ export default function TagsPage() {
               Tags
             </h1>
             <p className="mt-1 text-sm text-zinc-400">
-              Gestisci i tag per raggruppare i servizi
+              {tTags("subtitle")}
             </p>
           </div>
           <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -147,7 +152,7 @@ export default function TagsPage() {
                 className="bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-500 hover:to-blue-600 shadow-lg shadow-blue-600/20 flex-1 sm:flex-none"
               >
                 <Plus className="mr-2 h-4 w-4" />
-                Nuovo Tag
+                {tTags("newTag")}
               </Button>
             )}
           </div>
@@ -186,7 +191,7 @@ export default function TagsPage() {
           <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-800 bg-zinc-900/30 py-20">
             <TagsIcon className="h-12 w-12 text-zinc-700" />
             <p className="mt-4 text-sm text-zinc-500">
-              Nessun tag configurato
+              {tTags("noTags")}
             </p>
             {userRole === "Admin" && (
               <Button
@@ -195,7 +200,7 @@ export default function TagsPage() {
                 onClick={handleOpenCreate}
               >
                 <Plus className="mr-2 h-4 w-4" />
-                Crea il primo tag
+                {tTags("createFirst")}
               </Button>
             )}
           </div>
@@ -227,7 +232,7 @@ export default function TagsPage() {
                     {(tag.tagServices && tag.tagServices.length > 0) || (tag.services && tag.services.length > 0) ? (
                       <div className="flex flex-col">
                         <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium mb-2">
-                          Servizi associati
+                          {tTags("associatedServices")}
                         </p>
                         <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                           {(tag.tagServices ? tag.tagServices.map(ts => ts.service) : tag.services!).map((svc) => (
@@ -246,7 +251,7 @@ export default function TagsPage() {
                       </div>
                     ) : (
                       <p className="text-sm text-zinc-500 italic">
-                        Nessun servizio associato
+                        {tTags("noAssociatedServices")}
                       </p>
                     )}
                   </CardContent>
@@ -259,7 +264,7 @@ export default function TagsPage() {
                         onClick={() => handleOpenEdit(tag)}
                       >
                         <Pencil className="size-3.5" />
-                        Modifica
+                        {tCommon("edit")}
                       </Button>
                       <Button
                         variant="destructive"
@@ -267,7 +272,7 @@ export default function TagsPage() {
                         onClick={() => setDeleteTarget(tag)}
                       >
                         <Trash2 className="size-3.5" />
-                        Elimina
+                        {tCommon("delete")}
                       </Button>
                     </CardFooter>
                   )}
@@ -280,12 +285,12 @@ export default function TagsPage() {
             <Table>
               <TableHeader>
                 <TableRow className="border-zinc-800 hover:bg-transparent">
-                  <TableHead className="text-zinc-400 w-12">Colore</TableHead>
-                  <TableHead className="text-zinc-400">Nome</TableHead>
+                  <TableHead className="text-zinc-400 w-12">{tTags("color")}</TableHead>
+                  <TableHead className="text-zinc-400">{tCommon("name")}</TableHead>
                   <TableHead className="text-zinc-400 w-20">ID</TableHead>
-                  <TableHead className="text-zinc-400">Servizi Associati</TableHead>
+                  <TableHead className="text-zinc-400">{tTags("associatedServices")}</TableHead>
                   {userRole === "Admin" && (
-                    <TableHead className="w-14 text-right text-zinc-400">Azioni</TableHead>
+                    <TableHead className="w-14 text-right text-zinc-400">{tCommon("actions")}</TableHead>
                   )}
                 </TableRow>
               </TableHeader>
@@ -322,7 +327,7 @@ export default function TagsPage() {
                           </span>
                         </div>
                       ) : (
-                        <span className="text-sm text-zinc-500 italic">Nessun servizio</span>
+                        <span className="text-sm text-zinc-500 italic">{tTags("noAssociatedServices")}</span>
                       )}
                     </TableCell>
                     {userRole === "Admin" && (
@@ -334,14 +339,14 @@ export default function TagsPage() {
                           <DropdownMenuContent align="end" className="w-48">
                             <DropdownMenuItem onClick={() => handleOpenEdit(tag)}>
                               <Pencil className="mr-2 h-4 w-4" />
-                              Modifica
+                              {tCommon("edit")}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-red-400 focus:text-red-400"
                               onClick={() => setDeleteTarget(tag)}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
-                              Elimina
+                              {tCommon("delete")}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -372,9 +377,9 @@ export default function TagsPage() {
         onOpenChange={(open) => {
           if (!open) setDeleteTarget(null);
         }}
-        title="Elimina Tag"
-        description={`Sei sicuro di voler eliminare il tag "${deleteTarget?.name ?? ""}"? Questa azione è irreversibile.`}
-        confirmLabel="Elimina"
+        title={tTags("deleteTitle")}
+        description={tTags("deleteConfirm", { name: deleteTarget?.name ?? "" })}
+        confirmLabel={tCommon("delete")}
         variant="destructive"
         onConfirm={handleConfirmDelete}
       />

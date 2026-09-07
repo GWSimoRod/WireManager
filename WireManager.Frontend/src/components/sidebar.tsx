@@ -1,26 +1,28 @@
 'use client'
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { Link, usePathname } from '@/i18n/routing'
 import { Shield, Monitor, Users, Tags, Server, LogOut, UserPlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/auth-context'
 import { cn } from '@/lib/utils'
-
-const navLinks = [
-  { href: '/peers', label: 'Peers', icon: Users },
-  { href: '/tags', label: 'Tags', icon: Tags },
-  { href: '/services', label: 'Servizi', icon: Server },
-]
-
-const adminLinks = [
-  { href: '/dashboard', label: 'Server', icon: Monitor },
-  { href: '/users', label: 'Utenti', icon: UserPlus },
-]
+import { useTranslations } from 'next-intl'
 
 export function SidebarContent({ onClick }: { onClick?: () => void }) {
   const pathname = usePathname()
   const { logout, userRole } = useAuth()
+  const t = useTranslations('Sidebar')
+  const tCommon = useTranslations('Common')
+
+  const navLinks = [
+    { href: '/peers', label: t('peers'), icon: Users },
+    { href: '/tags', label: t('tags'), icon: Tags },
+    { href: '/services', label: t('services'), icon: Server },
+  ]
+
+  const adminLinks = [
+    { href: '/dashboard', label: t('servers'), icon: Monitor },
+    { href: '/users', label: t('users'), icon: UserPlus },
+  ]
 
   return (
     <>
@@ -92,7 +94,7 @@ export function SidebarContent({ onClick }: { onClick?: () => void }) {
           }}
         >
           <LogOut className="size-4" />
-          Logout
+          {tCommon('logout')}
         </Button>
       </div>
     </>

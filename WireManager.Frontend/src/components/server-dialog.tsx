@@ -14,6 +14,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { useTranslations } from 'next-intl'
 
 interface ServerDialogProps {
   open: boolean
@@ -28,6 +29,10 @@ export function ServerDialog({
   server = null,
   onSave,
 }: ServerDialogProps) {
+  const t = useTranslations('Servers')
+  const tCommon = useTranslations('Common')
+  const tDialogs = useTranslations('Dialogs')
+  
   const isEditing = server !== null
   const [isLoading, setIsLoading] = useState(false)
   const [rangeIP, setRangeIP] = useState('')
@@ -69,18 +74,18 @@ export function ServerDialog({
       <DialogContent className="w-full max-w-full sm:max-w-md h-[100dvh] sm:h-auto max-h-[100dvh] sm:max-h-[90vh] rounded-none sm:rounded-xl overflow-y-auto p-4 sm:p-6 border-0 sm:border">
         <DialogHeader>
           <DialogTitle>
-            {isEditing ? 'Modifica Server' : 'Nuovo Server'}
+            {isEditing ? t('editServer') : t('newServer')}
           </DialogTitle>
           <DialogDescription>
             {isEditing
-              ? 'Modifica i parametri del server WireGuard.'
-              : 'Inserisci i dati per creare un nuovo server WireGuard.'}
+              ? t('editServerDesc')
+              : t('newServerDesc')}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="rangeIP">Range IP</Label>
+            <Label htmlFor="rangeIP">{t('rangeIp')}</Label>
             <Input
               id="rangeIP"
               placeholder="10.0.0.0/24"
@@ -91,7 +96,7 @@ export function ServerDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="listenPort">Listen Port</Label>
+            <Label htmlFor="listenPort">{t('listenPort')}</Label>
             <Input
               id="listenPort"
               type="number"
@@ -103,7 +108,7 @@ export function ServerDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="endPoint">Endpoint</Label>
+            <Label htmlFor="endPoint">{t('endpoint')}</Label>
             <Input
               id="endPoint"
               placeholder="vpn.example.com"
@@ -120,11 +125,11 @@ export function ServerDialog({
               onClick={() => onOpenChange(false)}
               disabled={isLoading}
             >
-              Annulla
+              {tDialogs('cancel')}
             </Button>
             <Button type="submit" disabled={isLoading}>
               {isLoading && <Loader2 className="size-4 animate-spin" />}
-              {isEditing ? 'Salva' : 'Crea'}
+              {isEditing ? tCommon('save') : tCommon('create')}
             </Button>
           </DialogFooter>
         </form>

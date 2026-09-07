@@ -1,4 +1,5 @@
-'use client'
+"use client";
+import { useTranslations } from "next-intl";
 
 import { useState, useEffect, useMemo } from 'react'
 import { Loader2, Info, CalendarClock, X } from 'lucide-react'
@@ -28,13 +29,13 @@ import {
 import { Button } from '@/components/ui/button'
 
 // Preset expiration durations
-const EXPIRATION_PRESETS: { label: string; days: number }[] = [
-  { label: '1 giorno', days: 1 },
-  { label: '3 giorni', days: 3 },
-  { label: '5 giorni', days: 5 },
-  { label: '7 giorni', days: 7 },
-  { label: '14 giorni', days: 14 },
-  { label: '30 giorni', days: 30 },
+const EXPIRATION_PRESETS: { labelKey: string; days: number }[] = [
+  { labelKey: 'day1', days: 1 },
+  { labelKey: 'day3', days: 3 },
+  { labelKey: 'day5', days: 5 },
+  { labelKey: 'day7', days: 7 },
+  { labelKey: 'day14', days: 14 },
+  { labelKey: 'day30', days: 30 },
 ]
 
 // Convert a Date to an ISO-like string compatible with datetime-local input (YYYY-MM-DDTHH:mm)
@@ -62,6 +63,8 @@ export function PeerModal({
   peerTagIds,
   onSave,
 }: PeerModalProps) {
+  const tPeers = useTranslations("Peers");
+  const tCommon = useTranslations("Common");
   const isEditing = peer !== null
   const [isLoading, setIsLoading] = useState(false)
   const [clientName, setClientName] = useState('')
@@ -190,18 +193,18 @@ export function PeerModal({
       <DialogContent className="w-full max-w-full sm:max-w-md h-[100dvh] sm:h-auto max-h-[100dvh] sm:max-h-[90vh] rounded-none sm:rounded-xl overflow-y-auto p-4 sm:p-6 border-0 sm:border">
         <DialogHeader>
           <DialogTitle>
-            {isEditing ? 'Modifica Peer' : 'Nuovo Peer'}
+            {isEditing ? tPeers("modalEditTitle") : tPeers("modalCreateTitle")}
           </DialogTitle>
           <DialogDescription>
             {isEditing
-              ? 'Modifica i parametri del peer.'
-              : 'Inserisci i dati per creare un nuovo peer.'}
+              ? tPeers("editPeerDesc")
+              : tPeers("createPeerDesc")}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="clientName">Nome Client</Label>
+            <Label htmlFor="clientName">{tPeers("clientName")}</Label>
             <Input
               id="clientName"
               placeholder="client-01"
@@ -213,19 +216,19 @@ export function PeerModal({
 
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <Label htmlFor="address">Indirizzo</Label>
+              <Label htmlFor="address">{tPeers("address")}</Label>
               <Tooltip>
                 <TooltipTrigger type="button" tabIndex={-1}>
                   <Info className="size-4 text-zinc-500 hover:text-zinc-300 transition-colors" />
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p className="max-w-xs text-sm">Se lasciato vuoto, il server assegnerà automaticamente un indirizzo IP disponibile.</p>
+                  <p className="max-w-xs text-sm">{tPeers("addressTooltip")}</p>
                 </TooltipContent>
               </Tooltip>
             </div>
             <Input
               id="address"
-              placeholder="10.0.0.2/32 (Opzionale)"
+              placeholder={`10.0.0.2/32 ${tPeers("optional")}`}
               value={address}
               onChange={(e) => setAddress(e.target.value)}
             />
@@ -255,20 +258,20 @@ export function PeerModal({
 
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <Label htmlFor="persistentKeepAlive">Persistent KeepAlive</Label>
+              <Label htmlFor="persistentKeepAlive">{tPeers("persistentKeepAlive")}</Label>
               <Tooltip>
                 <TooltipTrigger type="button" tabIndex={-1}>
                   <Info className="size-4 text-zinc-500 hover:text-zinc-300 transition-colors" />
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p className="max-w-xs text-sm">Tempo in secondi. Opzionale. Invia pacchetti vuoti a intervalli regolari per mantenere la connessione.</p>
+                  <p className="max-w-xs text-sm">{tPeers("keepAliveTooltip")}</p>
                 </TooltipContent>
               </Tooltip>
             </div>
             <Input
               id="persistentKeepAlive"
               type="number"
-              placeholder="es. 25"
+              placeholder={tPeers("keepAlivePlaceholder")}
               value={persistentKeepAlive}
               onChange={(e) => setPersistentKeepAlive(e.target.value)}
               min="1"
@@ -276,13 +279,13 @@ export function PeerModal({
           </div>
 
           <div className="space-y-2">
-            <Label>Server</Label>
+            <Label>{tPeers("server")}</Label>
             <Select
               value={confServerId}
               onValueChange={(v) => setConfServerId(v ?? '')}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Seleziona server">
+                <SelectValue placeholder={tPeers("selectServer")}>
                   {confServerId
                     ? servers.find((s) => String(s.id) === confServerId)?.endPoint
                     : undefined}
@@ -307,10 +310,10 @@ export function PeerModal({
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-zinc-200">
-                    Scadenza
+                    {tPeers("expirationLabel")}
                   </Label>
                   <p className="text-[11px] text-zinc-500 leading-tight">
-                    Il peer verrà eliminato automaticamente
+                    {tPeers("expirationDesc")}
                   </p>
                 </div>
               </div>
@@ -319,7 +322,7 @@ export function PeerModal({
                   type="button"
                   onClick={handleClearExpiration}
                   className="rounded p-1 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-colors"
-                  title="Rimuovi scadenza"
+                  title={tPeers("removeExpiration")}
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -339,7 +342,7 @@ export function PeerModal({
                       : 'bg-zinc-800/60 text-zinc-400 border border-zinc-700/50 hover:bg-zinc-800 hover:text-zinc-300'
                   }`}
                 >
-                  {preset.label}
+                  {tPeers(preset.labelKey)}
                 </button>
               ))}
               <button
@@ -351,7 +354,7 @@ export function PeerModal({
                     : 'bg-zinc-800/60 text-zinc-400 border border-zinc-700/50 hover:bg-zinc-800 hover:text-zinc-300'
                 }`}
               >
-                Personalizzata
+                {tPeers("custom")}
               </button>
             </div>
 
@@ -378,22 +381,22 @@ export function PeerModal({
             {/* Summary of selected expiration */}
             {expireMode === 'preset' && expirePresetDays !== null && (
               <p className="text-[11px] text-orange-400/70">
-                Scade il{' '}
+                {tPeers("expiresOn")}{' '}
                 <span className="font-medium text-orange-300/90">
-                  {new Date(Date.now() + expirePresetDays * 86400000).toLocaleDateString('it-IT', {
+                  {new Date(Date.now() + expirePresetDays * 86400000).toLocaleDateString(undefined, {
                     day: '2-digit',
                     month: 'long',
                     year: 'numeric',
                   })}
                 </span>{' '}
-                a mezzanotte
+                {tPeers("atMidnight")}
               </p>
             )}
             {expireMode === 'custom' && expireCustom && (
               <p className="text-[11px] text-orange-400/70">
-                Scade il{' '}
+                {tPeers("expiresOn")}{' '}
                 <span className="font-medium text-orange-300/90">
-                  {new Date(expireCustom).toLocaleString('it-IT', {
+                  {new Date(expireCustom).toLocaleString(undefined, {
                     day: '2-digit',
                     month: 'long',
                     year: 'numeric',
@@ -405,7 +408,7 @@ export function PeerModal({
             )}
             {expireMode === 'none' && (
               <p className="text-[11px] text-zinc-600 italic">
-                Nessuna scadenza impostata
+                {tPeers("noExpirationSet")}
               </p>
             )}
           </div>
@@ -413,9 +416,9 @@ export function PeerModal({
           {/* Tag / Policy assignment */}
           {tags.length > 0 && (
             <div className="space-y-2">
-              <Label>Tag (Policy)</Label>
+              <Label>{tPeers("tagPolicy")}</Label>
               <p className="text-xs text-zinc-500">
-                Seleziona i tag da associare a questo peer.
+                {tPeers("selectTagsDesc")}
               </p>
               <div className="max-h-40 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-900/50 p-2 space-y-1">
                 {tags.map((tag) => {
@@ -451,7 +454,7 @@ export function PeerModal({
                       <span className="flex-1 text-left">{tag.name}</span>
                       {((tag.tagServices && tag.tagServices.length > 0) || (tag.services && tag.services.length > 0)) && (
                         <span className="text-xs text-zinc-500">
-                          {tag.tagServices ? tag.tagServices.length : tag.services!.length} servizi
+                          {tag.tagServices ? tag.tagServices.length : tag.services!.length} {tPeers("services")}
                         </span>
                       )}
                     </button>
@@ -468,11 +471,11 @@ export function PeerModal({
               onClick={() => onOpenChange(false)}
               disabled={isLoading}
             >
-              Annulla
+              {tCommon("cancel")}
             </Button>
             <Button type="submit" disabled={isLoading || confServerId === ''}>
               {isLoading && <Loader2 className="size-4 animate-spin" />}
-              {isEditing ? 'Salva' : 'Crea'}
+              {isEditing ? tCommon("save") : tCommon("create")}
             </Button>
           </DialogFooter>
         </form>

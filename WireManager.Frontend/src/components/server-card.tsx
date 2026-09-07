@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { useTranslations } from 'next-intl'
 import {
   Tooltip,
   TooltipContent,
@@ -28,6 +29,10 @@ interface ServerCardProps {
 }
 
 export function ServerCard({ server, onEdit, onDelete, onSync }: ServerCardProps) {
+  const tServers = useTranslations("Servers");
+  const tCommon = useTranslations("Common");
+
+  const t = useTranslations('Servers')
   const [copied, setCopied] = useState(false)
 
   const truncatedKey =
@@ -52,11 +57,11 @@ export function ServerCard({ server, onEdit, onDelete, onSync }: ServerCardProps
           <CardTitle>{server.endPoint}</CardTitle>
           <Badge variant="secondary">ID: {server.id}</Badge>
         </div>
-        <CardDescription>WireGuard Server</CardDescription>
+        <CardDescription>{t('wireguardServer')}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-3">
-        {/* Range IP */}
+        {/* {tServers("rangeIp")} */}
         <div className="flex items-center gap-2 text-sm text-zinc-400">
           <Network className="size-4 text-zinc-500" />
           <span className="text-zinc-300">{server.rangeIP}</span>
@@ -65,7 +70,7 @@ export function ServerCard({ server, onEdit, onDelete, onSync }: ServerCardProps
         {/* Listen Port */}
         <div className="flex items-center gap-2 text-sm text-zinc-400">
           <Wifi className="size-4 text-zinc-500" />
-          <span className="text-zinc-300">Porta {server.listenPort}</span>
+          <span className="text-zinc-300">{t('port')} {server.listenPort}</span>
         </div>
 
         {/* Public Key */}
@@ -103,11 +108,11 @@ export function ServerCard({ server, onEdit, onDelete, onSync }: ServerCardProps
       <CardFooter className="gap-2">
         <Button variant="outline" size="sm" onClick={() => onEdit(server)}>
           <Pencil className="size-3.5" />
-          Modifica
+          {t('editServer').split(' ')[0]}
         </Button>
         <Button variant="destructive" size="sm" onClick={() => onDelete(server)}>
           <Trash2 className="size-3.5" />
-          Elimina
+          {t('deleteTitle').split(' ')[0]}
         </Button>
         <Button
           variant="outline"

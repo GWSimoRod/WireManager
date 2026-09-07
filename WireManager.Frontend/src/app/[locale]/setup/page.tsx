@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/routing";
 import {
   Shield,
   User,
@@ -17,9 +17,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { getSetupStatus, submitSetup } from "@/lib/api-client";
+import { useTranslations } from "next-intl";
 
 export default function SetupPage() {
   const router = useRouter();
+  const tSetup = useTranslations("Setup");
+  const tAuth = useTranslations("Auth");
 
   // Loading / redirect state
   const [isCheckingStatus, setIsCheckingStatus] = useState(true);
@@ -54,19 +57,19 @@ export default function SetupPage() {
 
   function validate(): boolean {
     if (adminUsername.trim().length < 3) {
-      toast.error("L'username deve avere almeno 3 caratteri");
+      toast.error(tSetup("usernameLengthError"));
       return false;
     }
     if (adminPassword.length < 6) {
-      toast.error("La password deve avere almeno 6 caratteri");
+      toast.error(tSetup("passwordLengthError"));
       return false;
     }
     if (adminPassword !== confirmPassword) {
-      toast.error("Le password non coincidono");
+      toast.error(tSetup("passwordMismatch"));
       return false;
     }
     if (!containerName.trim()) {
-      toast.error("Il nome del container è obbligatorio");
+      toast.error(tSetup("containerNameRequired"));
       return false;
     }
     return true;
@@ -84,11 +87,11 @@ export default function SetupPage() {
         ExecutionMode: true,
         ContainerWireguardName: containerName.trim(),
       });
-      toast.success("Setup completato! Effettua il login con le credenziali create.");
+      toast.success(tSetup("setupComplete"));
       router.replace("/login");
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Errore durante il setup";
+        err instanceof Error ? err.message : tSetup("setupError");
       toast.error(message);
     } finally {
       setIsSubmitting(false);
@@ -120,10 +123,10 @@ export default function SetupPage() {
               <Shield className="h-8 w-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-zinc-100">
-              Setup Iniziale
+              {tSetup("title")}
             </h1>
             <p className="text-center text-sm text-zinc-400">
-              Configura WireManager per il primo utilizzo
+              {tSetup("subtitle")}
             </p>
           </div>
 
@@ -132,13 +135,13 @@ export default function SetupPage() {
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-sm font-medium text-zinc-300">
                 <User className="h-4 w-4 text-blue-400" />
-                Credenziali Amministratore
+                {tSetup("adminCredentials")}
               </div>
 
               <div className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-800/30 p-4">
                 <div>
                   <Label htmlFor="setup-username" className="text-xs text-zinc-400 mb-1.5 block">
-                    Username
+                    {tAuth("username")}
                   </Label>
                   <div className="relative">
                     <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
@@ -157,14 +160,14 @@ export default function SetupPage() {
 
                 <div>
                   <Label htmlFor="setup-password" className="text-xs text-zinc-400 mb-1.5 block">
-                    Password
+                    {tAuth("password")}
                   </Label>
                   <div className="relative">
                     <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
                     <Input
                       id="setup-password"
                       type={showPassword ? "text" : "password"}
-                      placeholder="Minimo 6 caratteri"
+                      placeholder={tSetup("minPasswordLength")}
                       value={adminPassword}
                       onChange={(e) => setAdminPassword(e.target.value)}
                       className="pl-10 pr-10 bg-zinc-800/50 border-zinc-700 placeholder:text-zinc-600 focus:border-blue-500 focus:ring-blue-500/20"
@@ -184,14 +187,14 @@ export default function SetupPage() {
 
                 <div>
                   <Label htmlFor="setup-confirm-password" className="text-xs text-zinc-400 mb-1.5 block">
-                    Conferma Password
+                    {tSetup("confirmPassword")}
                   </Label>
                   <div className="relative">
                     <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
                     <Input
                       id="setup-confirm-password"
                       type={showConfirmPassword ? "text" : "password"}
-                      placeholder="Ripeti la password"
+                      placeholder={tSetup("repeatPassword")}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       className="pl-10 pr-10 bg-zinc-800/50 border-zinc-700 placeholder:text-zinc-600 focus:border-blue-500 focus:ring-blue-500/20"
@@ -212,10 +215,10 @@ export default function SetupPage() {
                       {adminPassword === confirmPassword ? (
                         <>
                           <Check className="h-3 w-3 text-emerald-400" />
-                          <span className="text-xs text-emerald-400">Le password coincidono</span>
+                          <span className="text-xs text-emerald-400">{tSetup("passwordsMatch")}</span>
                         </>
                       ) : (
-                        <span className="text-xs text-red-400">Le password non coincidono</span>
+                        <span className="text-xs text-red-400">{tSetup("passwordMismatch")}</span>
                       )}
                     </div>
                   )}
@@ -227,13 +230,13 @@ export default function SetupPage() {
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-sm font-medium text-zinc-300">
                 <Container className="h-4 w-4 text-blue-400" />
-                Container Docker
+                {tSetup("dockerContainer")}
               </div>
 
               <div className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-800/30 p-4">
                 <div>
                   <Label htmlFor="setup-container-name" className="text-xs text-zinc-400 mb-1.5 block">
-                    Nome Container WireGuard
+                    {tSetup("containerName")}
                   </Label>
                   <div className="relative">
                     <Container className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
@@ -248,7 +251,7 @@ export default function SetupPage() {
                     />
                   </div>
                   <p className="mt-1.5 text-xs text-zinc-500">
-                    Il nome del container Docker in cui è in esecuzione WireGuard
+                    {tSetup("containerHint")}
                   </p>
                 </div>
               </div>
@@ -264,10 +267,10 @@ export default function SetupPage() {
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Configurazione in corso…
+                  {tSetup("configuring")}
                 </>
               ) : (
-                "Completa Setup"
+                tSetup("completeSetup")
               )}
             </Button>
           </form>
@@ -275,7 +278,7 @@ export default function SetupPage() {
 
         {/* Footer */}
         <p className="mt-4 text-center text-xs text-zinc-600">
-          WireManager — Gestione centralizzata WireGuard
+          {tSetup("footer")}
         </p>
       </div>
     </div>

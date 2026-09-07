@@ -14,7 +14,7 @@
 *.userprefs
 
 # cartella conf debug
-./WireManager.API/config/
+/WireManager.API/config/
 
 # Mono auto generated files
 mono_crash.*
@@ -375,4 +375,4 @@ FodyWeavers.xsd
 
 # Secrets
 *.secret
-jwt.secret
+jwt.secret

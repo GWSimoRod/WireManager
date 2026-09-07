@@ -41,6 +41,7 @@ import { useAuth } from "@/lib/auth-context";
 import { ServiceModal } from "@/components/service-modal";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ViewToggle, type ViewMode } from "@/components/view-toggle";
+import { useTranslations } from "next-intl";
 import {
   getServices,
   createService,
@@ -69,6 +70,9 @@ function ServiceCardItem({
   onDelete: (svc: Service) => void;
   userRole: string | null;
 }) {
+  const t = useTranslations('Services');
+  const tCommon = useTranslations('Common');
+
   return (
     <div
       className="animate-fade-in"
@@ -85,13 +89,13 @@ function ServiceCardItem({
               {svc.isGlobal && (
                 <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/25 hover:bg-amber-500/20">
                   <Globe className="size-3 mr-1" />
-                  Globale
+                  {t('global')}
                 </Badge>
               )}
               <Badge variant="secondary">ID: {svc.id}</Badge>
             </div>
           </div>
-          <CardDescription>Servizio di rete</CardDescription>
+          <CardDescription>{t('networkService')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center gap-2 text-sm text-zinc-400">
@@ -101,7 +105,7 @@ function ServiceCardItem({
           <div className="flex items-center gap-2 text-sm text-zinc-400">
             <Wifi className="size-4 text-zinc-500" />
             <span className="text-zinc-300">
-              {protocolHasPort(svc) ? `Porta ${svc.port}` : 'Nessuna porta'}
+              {protocolHasPort(svc) ? t('port', { port: svc.port }) : t('noPort')}
             </span>
           </div>
           <div className="flex items-center gap-2 text-sm text-zinc-400">
@@ -148,7 +152,7 @@ function ServiceCardItem({
               onClick={() => onDelete(svc)}
             >
               <Trash2 className="size-3.5" />
-              Elimina
+              {tCommon('delete')}
             </Button>
           </CardFooter>
         )}
@@ -168,6 +172,9 @@ function ServiceTableRow({
   onDelete: (svc: Service) => void;
   userRole: string | null;
 }) {
+  const t = useTranslations('Services');
+  const tCommon = useTranslations('Common');
+
   return (
     <TableRow
       className="animate-fade-in border-zinc-800 hover:bg-zinc-800/50 transition-colors"
@@ -182,7 +189,7 @@ function ServiceTableRow({
           {svc.isGlobal && (
             <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/25 hover:bg-amber-500/20 text-[11px] px-1.5 py-0">
               <Globe className="size-3 mr-0.5" />
-              Globale
+              {t('global')}
             </Badge>
           )}
         </div>
@@ -245,7 +252,7 @@ function ServiceTableRow({
                 onClick={() => onDelete(svc)}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                Elimina
+                {tCommon('delete')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -291,22 +298,25 @@ function SectionHeader({
 /* ─────────────────────────── table shell ──────────────────────────── */
 
 function ServiceTableShell({ children, userRole }: { children: React.ReactNode, userRole: string | null }) {
+  const t = useTranslations('Services');
+  const tCommon = useTranslations('Common');
+
   return (
     <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow className="border-zinc-800 hover:bg-transparent">
-            <TableHead className="text-zinc-400">Nome</TableHead>
-            <TableHead className="text-zinc-400">IP Destinazione</TableHead>
-            <TableHead className="text-zinc-400">Porta</TableHead>
-            <TableHead className="text-zinc-400">Protocollo</TableHead>
-            <TableHead className="text-zinc-400">Dominio</TableHead>
+            <TableHead className="text-zinc-400">{tCommon('name')}</TableHead>
+            <TableHead className="text-zinc-400">{t('targetIp')}</TableHead>
+            <TableHead className="text-zinc-400">{t('portLabel')}</TableHead>
+            <TableHead className="text-zinc-400">{t('protocol')}</TableHead>
+            <TableHead className="text-zinc-400">{t('domain')}</TableHead>
             <TableHead className="text-zinc-400 w-[1%] whitespace-nowrap">
-              Tags
+              {t('tags')}
             </TableHead>
             {userRole === "Admin" && (
               <TableHead className="w-14 text-right text-zinc-400">
-                Azioni
+                {tCommon('actions')}
               </TableHead>
             )}
           </TableRow>
@@ -320,6 +330,10 @@ function ServiceTableShell({ children, userRole }: { children: React.ReactNode, 
 /* ══════════════════════════════ PAGE ══════════════════════════════════ */
 
 export default function ServicesPage() {
+  const t = useTranslations("Services");
+  const tCommon = useTranslations("Common");
+
+
   const { userRole } = useAuth();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
@@ -353,12 +367,12 @@ export default function ServicesPage() {
       setServices(servicesData);
     } catch (err) {
       const message =
-        err instanceof ApiClientError ? err.message : "Errore caricamento dati";
+        err instanceof ApiClientError ? err.message : t('loadError');
       toast.error(message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchData();
@@ -367,13 +381,13 @@ export default function ServicesPage() {
   async function handleCreateService(data: CreateServicePayload) {
     try {
       await createService(data);
-      toast.success("Servizio creato");
+      toast.success(t('created'));
       await fetchData();
     } catch (err) {
       const message =
         err instanceof ApiClientError
           ? err.message
-          : "Errore creazione servizio";
+          : t('createError');
       toast.error(message);
       throw err;
     }
@@ -383,14 +397,14 @@ export default function ServicesPage() {
     if (!deleteTarget) return;
     try {
       await deleteService(deleteTarget.id);
-      toast.success("Servizio eliminato");
+      toast.success(t('deleted'));
       setDeleteTarget(null);
       await fetchData();
     } catch (err) {
       const message =
         err instanceof ApiClientError
           ? err.message
-          : "Errore eliminazione servizio";
+          : t('deleteError');
       toast.error(message);
     }
   }
@@ -402,10 +416,10 @@ export default function ServicesPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-zinc-100">
-              Servizi
+              {t('title')}
             </h1>
             <p className="mt-1 text-sm text-zinc-400">
-              Gestisci le regole di rete e i servizi
+              {t('subtitle')}
             </p>
           </div>
           <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -417,7 +431,7 @@ export default function ServicesPage() {
                 className="bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-500 hover:to-blue-600 shadow-lg shadow-blue-600/20 flex-1 sm:flex-none"
               >
                 <Plus className="mr-2 h-4 w-4" />
-                Nuovo Servizio
+                {t('newService')}
               </Button>
             )}
           </div>
@@ -457,7 +471,7 @@ export default function ServicesPage() {
           <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-800 bg-zinc-900/30 py-20">
             <Server className="h-12 w-12 text-zinc-700" />
             <p className="mt-4 text-sm text-zinc-500">
-              Nessun servizio configurato
+              {t('noServices')}
             </p>
             {userRole === "Admin" && (
               <Button
@@ -466,7 +480,7 @@ export default function ServicesPage() {
                 onClick={() => setModalOpen(true)}
               >
                 <Plus className="mr-2 h-4 w-4" />
-                Crea il primo servizio
+                {t('createFirst')}
               </Button>
             )}
           </div>
@@ -479,9 +493,9 @@ export default function ServicesPage() {
                 <SectionHeader
                   icon={Globe}
                   iconClassName="text-amber-400"
-                  title="Servizi Globali"
+                  title={t('globalServices')}
                   count={globalServices.length}
-                  description="Aggiunti automaticamente al firewall di tutti i peer"
+                  description={t('globalServicesDesc')}
                 />
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {globalServices.map((svc, index) => (
@@ -503,9 +517,9 @@ export default function ServicesPage() {
                 <SectionHeader
                   icon={ShieldCheck}
                   iconClassName="text-blue-400"
-                  title="Servizi Locali"
+                  title={t('localServices')}
                   count={localServices.length}
-                  description="Assegnati tramite tag e policy ai singoli peer"
+                  description={t('localServicesDesc')}
                 />
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {localServices.map((svc, index) => (
@@ -530,9 +544,9 @@ export default function ServicesPage() {
                 <SectionHeader
                   icon={Globe}
                   iconClassName="text-amber-400"
-                  title="Servizi Globali"
+                  title={t('globalServices')}
                   count={globalServices.length}
-                  description="Aggiunti automaticamente al firewall di tutti i peer"
+                  description={t('globalServicesDesc')}
                 />
                 <ServiceTableShell userRole={userRole}>
                   {globalServices.map((svc, index) => (
@@ -554,9 +568,9 @@ export default function ServicesPage() {
                 <SectionHeader
                   icon={ShieldCheck}
                   iconClassName="text-blue-400"
-                  title="Servizi Locali"
+                  title={t('localServices')}
                   count={localServices.length}
-                  description="Assegnati tramite tag e policy ai singoli peer"
+                  description={t('localServicesDesc')}
                 />
                 <ServiceTableShell userRole={userRole}>
                   {localServices.map((svc, index) => (
@@ -587,9 +601,9 @@ export default function ServicesPage() {
         onOpenChange={(open) => {
           if (!open) setDeleteTarget(null);
         }}
-        title="Elimina Servizio"
-        description={`Sei sicuro di voler eliminare il servizio "${deleteTarget?.name ?? ""}"? Questa azione è irreversibile.`}
-        confirmLabel="Elimina"
+        title={t('deleteTitle')}
+        description={deleteTarget ? t('deleteConfirm', { name: deleteTarget.name }) : ""}
+        confirmLabel={tCommon('delete')}
         variant="destructive"
         onConfirm={handleConfirmDelete}
       />

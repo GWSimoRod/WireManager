@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/routing";
 import { useAuth } from "@/lib/auth-context";
 import { getSetupStatus } from "@/lib/api-client";
 import { Shield, User, Lock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -15,6 +16,8 @@ export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const tAuth = useTranslations("Auth");
+
   // Setup check is now handled globally in AuthProvider
 
   useEffect(() => {
@@ -30,7 +33,7 @@ export default function LoginPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!username.trim() || !password.trim()) {
-      toast.error("Inserisci username e password");
+      toast.error(tAuth("missingCredentials"));
       return;
     }
 
@@ -40,7 +43,7 @@ export default function LoginPage() {
       // Let the useEffect handle the redirection based on role
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Errore durante il login";
+        err instanceof Error ? err.message : tAuth("loginError");
       toast.error(message);
     } finally {
       setIsSubmitting(false);
@@ -76,7 +79,7 @@ export default function LoginPage() {
               WireManager
             </h1>
             <p className="text-sm text-zinc-400">
-              Gestione centralizzata WireGuard
+              {tAuth("subtitle")}
             </p>
           </div>
 
@@ -87,7 +90,7 @@ export default function LoginPage() {
               <Input
                 id="login-username"
                 type="text"
-                placeholder="Username"
+                placeholder={tAuth("username")}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="pl-10 bg-zinc-800/50 border-zinc-700 placeholder:text-zinc-500 focus:border-blue-500 focus:ring-blue-500/20"
@@ -101,7 +104,7 @@ export default function LoginPage() {
               <Input
                 id="login-password"
                 type="password"
-                placeholder="Password"
+                placeholder={tAuth("password")}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="pl-10 bg-zinc-800/50 border-zinc-700 placeholder:text-zinc-500 focus:border-blue-500 focus:ring-blue-500/20"
@@ -119,10 +122,10 @@ export default function LoginPage() {
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Accesso in corso…
+                  {tAuth("loggingIn")}
                 </>
               ) : (
-                "Accedi"
+                tAuth("login")
               )}
             </Button>
           </form>
