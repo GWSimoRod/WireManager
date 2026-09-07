@@ -8,6 +8,7 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+
     permissions:
       contents: read
       packages: write
@@ -32,4 +33,5 @@ jobs:
           context: ./WireManager.Frontend
           file: ./WireManager.Frontend/Dockerfile
           push: true
+          progress: plain
           tags: ghcr.io/gwsimorod/wiremanager-web:latest
