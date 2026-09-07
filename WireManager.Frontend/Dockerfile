@@ -3,7 +3,11 @@ FROM node:20-alpine AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci --include=optional
+RUN npm ci --include=optional --verbose || \
+    (echo "===== NPM LOGS =====" && \
+     cat /root/.npm/_logs/* 2>/dev/null || true; \
+     exit 1)
+
 
 # ── Stage 2: Build the application ───────────────────────────────────
 FROM node:20-alpine AS builder
