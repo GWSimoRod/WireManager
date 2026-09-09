@@ -22,9 +22,7 @@ export async function POST(request: NextRequest) {
   }
 
   const data = await res.json();
-  console.log('Login backend response:', data);
   const token = data.token || data.Token;
-  console.log('Extracted token:', token);
 
   if (!token) {
     return NextResponse.json({ success: false, message: 'Nessun token ricevuto dal server' }, { status: 401 });
