@@ -824,12 +824,14 @@ namespace WireManager.Core.Services
             return peerStats;
         }
 
-        public async Task<List<UsageHistory>?> GetPeerStatsAsync(int id)
+        public async Task<List<UsageHistory>?> GetPeerStatsAsync(int id, DateTime? from)
         {
             return await _context.UsageHistories
                 .AsNoTracking()
-                .Where(u => u.Peer != null && u.Peer.Id == id)
-                .OrderByDescending(u => u.Timestamp)
+                .Where(u => u.Peer != null &&
+                            u.Peer.Id == id &&
+                            u.Timestamp >= from)
+                .OrderBy(u => u.Timestamp)
                 .Take(100)
                 .ToListAsync();
         }

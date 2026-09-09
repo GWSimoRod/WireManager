@@ -289,12 +289,12 @@ namespace WireManager.API.Controllers
 
         [HttpGet("{id}/stats")]
         [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Operator}")]
-        public async Task<IActionResult> GetPeerStatsHistory(int id)
+        public async Task<IActionResult> GetPeerStatsHistory(int id, [FromQuery] DateTime from)
         {
             if (id <= 0) return BadRequest("Invalid ID.");
             try
             {
-                var stats = await _peerServices.GetPeerStatsAsync(id);
+                var stats = await _peerServices.GetPeerStatsAsync(id, from);
                 if (stats == null)
                 {
                     return NotFound();

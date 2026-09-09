@@ -2,9 +2,12 @@ import { NextRequest } from 'next/server';
 import { proxyRequest } from '@/lib/proxy';
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  return proxyRequest(`/api/Peer/${id}/stats`);
+  const { searchParams } = new URL(request.url);
+  const from = searchParams.get('from');
+  const query = from ? `?from=${encodeURIComponent(from)}` : '';
+  return proxyRequest(`/api/Peer/${id}/stats${query}`);
 }

@@ -308,8 +308,9 @@ export async function removePeerPolicy(peerId: number, policyId: number): Promis
 }
 
 // ─── Peer Stats ─────────────────────────────────────────────────────
-export async function getPeerStats(id: number): Promise<PeerUsageHistory[]> {
-  return request<PeerUsageHistory[]>(`/api/peers/${id}/stats`);
+export async function getPeerStats(id: number, from?: string): Promise<PeerUsageHistory[]> {
+  const query = from ? `?from=${encodeURIComponent(from)}` : '';
+  return request<PeerUsageHistory[]>(`/api/peers/${id}/stats${query}`);
 }
 
 export async function getPeerLiveStats(id: number): Promise<PeerLiveStats> {

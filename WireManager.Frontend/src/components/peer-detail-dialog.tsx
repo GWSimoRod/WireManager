@@ -11,6 +11,7 @@ import {
   Clock,
   Globe,
   Key,
+  Loader2,
   Monitor,
   Network,
   Server,
@@ -18,6 +19,8 @@ import {
   Wifi,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +32,14 @@ import { getPeer, getPeerStats, getPeerLiveStats, ApiClientError } from "@/lib/a
 import type { ConfPeer, PeerUsageHistory, PeerLiveStats, ConfServer } from "@/lib/types";
 
 // ─── Helpers ────────────────────────────────────────────────────────
+function toUtcIso(date: Date): string {
+  return date.toISOString().split('.')[0] + 'Z';
+}
+
+function toDateTimeLocal(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
 function formatBytes(bytes: number): string {
   if (bytes === 0) return "0 B";
   const units = ["B", "KB", "MB", "GB", "TB"];
@@ -88,7 +99,7 @@ interface ChartDataPoint {
   deltaTx: number;
 }
 
-function UsageChart({ data: propData }: { data: ChartDataPoint[] }) {
+function UsageChart({ data: propData, loading = false }: { data: ChartDataPoint[]; loading?: boolean }) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -98,7 +109,11 @@ function UsageChart({ data: propData }: { data: ChartDataPoint[] }) {
   if (data.length === 0) {
     return (
       <div className="flex h-52 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900/30">
-        <p className="text-sm text-zinc-500">Nessun dato di utilizzo disponibile</p>
+        {loading ? (
+          <Loader2 className="h-6 w-6 animate-spin text-violet-400" />
+        ) : (
+          <p className="text-sm text-zinc-500">Nessun dato di utilizzo disponibile</p>
+        )}
       </div>
     );
   }
@@ -149,11 +164,30 @@ function UsageChart({ data: propData }: { data: ChartDataPoint[] }) {
   const yTicks = [0, niceMax * 0.25, niceMax * 0.5, niceMax * 0.75, niceMax];
 
   // X axis ticks — filter based on time (target ~5 labels)
+  const formatTickLabel = (timestamp: string) => {
+    const d = parseDate(timestamp);
+    if (timeRange <= 24 * 3600 * 1000) {
+      return d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+    }
+    if (timeRange <= 4 * 24 * 3600 * 1000) {
+      return d.toLocaleString("it-IT", {
+        day: "2-digit",
+        month: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    }
+    return d.toLocaleDateString("it-IT", {
+      day: "2-digit",
+      month: "2-digit",
+    });
+  };
+
   const xTicks: { i: number; label: string }[] = [];
   if (timeRange === 0) {
-    xTicks.push({ i: 0, label: formatTime(data[0].timestamp) });
+    xTicks.push({ i: 0, label: formatTickLabel(data[0].timestamp) });
     if (data.length > 1) {
-      xTicks.push({ i: data.length - 1, label: formatTime(data[data.length - 1].timestamp) });
+      xTicks.push({ i: data.length - 1, label: formatTickLabel(data[data.length - 1].timestamp) });
     }
   } else {
     const targetTicksCount = 5;
@@ -171,7 +205,7 @@ function UsageChart({ data: propData }: { data: ChartDataPoint[] }) {
         }
       }
       if (!xTicks.some((tick) => tick.i === closestI)) {
-        xTicks.push({ i: closestI, label: formatTime(data[closestI].timestamp) });
+        xTicks.push({ i: closestI, label: formatTickLabel(data[closestI].timestamp) });
       }
     }
   }
@@ -201,6 +235,11 @@ function UsageChart({ data: propData }: { data: ChartDataPoint[] }) {
 
   return (
     <div className="relative">
+      {loading && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-zinc-900/60 backdrop-blur-[1px] rounded-lg">
+          <Loader2 className="h-6 w-6 animate-spin text-violet-400" />
+        </div>
+      )}
       {/* Legend */}
       <div className="mb-3 flex items-center gap-5 pl-1">
         <div className="flex items-center gap-1.5">
@@ -362,12 +401,38 @@ export function PeerDetailDialog({
 }: PeerDetailDialogProps) {
   const tPeers = useTranslations("Peers");
   const tCommon = useTranslations("Common");
+  const RANGE_PRESETS = [
+    { id: "default", label: tPeers("last100") },
+    { id: "1h", label: "1h", ms: 3600 * 1000 },
+    { id: "6h", label: "6h", ms: 6 * 3600 * 1000 },
+    { id: "24h", label: "24h", ms: 24 * 3600 * 1000 },
+    { id: "7d", label: "7g", ms: 7 * 86400 * 1000 },
+    { id: "30d", label: "30g", ms: 30 * 86400 * 1000 },
+    { id: "custom", label: "Data..." },
+  ] as const;
+
   const [peer, setPeer] = useState<ConfPeer | null>(null);
   const [stats, setStats] = useState<PeerUsageHistory[]>([]);
   const [liveStats, setLiveStats] = useState<PeerLiveStats | null>(null);
+  const [selectedRange, setSelectedRange] = useState<string>("default");
+  const [customFrom, setCustomFrom] = useState<string>("");
+  const [statsLoading, setStatsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [liveLoading, setLiveLoading] = useState(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const fetchStatsData = useCallback(async (id: number, from?: string) => {
+    setStatsLoading(true);
+    try {
+      const statsData = await getPeerStats(id, from);
+      setStats(statsData.sort((a, b) => parseDate(a.timestamp).getTime() - parseDate(b.timestamp).getTime()));
+    } catch (err) {
+      const message = err instanceof ApiClientError ? err.message : "Errore caricamento statistiche";
+      toast.error(message);
+    } finally {
+      setStatsLoading(false);
+    }
+  }, []);
 
   const fetchAllData = useCallback(async (id: number) => {
     setLoading(true);
@@ -398,12 +463,44 @@ export function PeerDetailDialog({
     }
   }, []);
 
+  const handleRangeSelect = (rangeId: string) => {
+    setSelectedRange(rangeId);
+    if (!peerId) return;
+
+    if (rangeId === "default") {
+      fetchStatsData(peerId);
+      return;
+    }
+
+    if (rangeId === "custom") {
+      if (!customFrom) {
+        const defaultCustom = new Date(Date.now() - 24 * 3600 * 1000);
+        setCustomFrom(toDateTimeLocal(defaultCustom));
+      }
+      return;
+    }
+
+    const preset = RANGE_PRESETS.find((p) => p.id === rangeId);
+    if (preset && "ms" in preset) {
+      const fromIso = toUtcIso(new Date(Date.now() - preset.ms));
+      fetchStatsData(peerId, fromIso);
+    }
+  };
+
+  const handleApplyCustom = () => {
+    if (!peerId || !customFrom) return;
+    const fromIso = toUtcIso(new Date(customFrom));
+    fetchStatsData(peerId, fromIso);
+  };
+
   // Fetch data when dialog opens
   useEffect(() => {
     if (open && peerId !== null) {
       setPeer(null);
       setStats([]);
       setLiveStats(null);
+      setSelectedRange("default");
+      setCustomFrom("");
       setLoading(true);
       setLiveLoading(true);
       fetchAllData(peerId);
@@ -584,17 +681,64 @@ export function PeerDetailDialog({
             </div>
 
             {/* Usage history chart */}
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
-              <div className="mb-3 flex items-center gap-2">
-                <Activity className="h-4 w-4 text-violet-400" />
-                <h3 className="text-sm font-semibold text-zinc-200">Storico Utilizzo</h3>
-                {stats.length > 0 && (
-                  <span className="ml-auto text-[11px] text-zinc-500">
-                    {stats.length} campioni
-                  </span>
-                )}
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 space-y-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-violet-400" />
+                  <h3 className="text-sm font-semibold text-zinc-200">{tPeers("usageHistory")}</h3>
+                  {stats.length > 0 && (
+                    <span className="text-[11px] text-zinc-500">
+                      ({stats.length} {tPeers("samples")})
+                    </span>
+                  )}
+                  {statsLoading && (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-zinc-400" />
+                  )}
+                </div>
+
+                {/* Range selector presets */}
+                <div className="flex flex-wrap items-center gap-1">
+                  {RANGE_PRESETS.map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => handleRangeSelect(preset.id)}
+                      className={`rounded-md px-2.5 py-1 text-xs font-medium transition-all ${
+                        selectedRange === preset.id
+                          ? "bg-violet-500/20 text-violet-300 border border-violet-500/40 shadow-sm"
+                          : "bg-zinc-800/60 text-zinc-400 border border-zinc-700/50 hover:bg-zinc-800 hover:text-zinc-300"
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <UsageChart data={chartData} />
+
+              {/* Custom date picker */}
+              {selectedRange === "custom" && (
+                <div className="flex flex-wrap items-center gap-2 rounded-lg bg-zinc-800/40 p-2.5 border border-zinc-800/60 text-xs">
+                  <span className="text-zinc-400 font-medium">{tPeers("fromLabel")}</span>
+                  <Input
+                    type="datetime-local"
+                    value={customFrom}
+                    onChange={(e) => setCustomFrom(e.target.value)}
+                    className="h-8 w-auto text-xs bg-zinc-900 border-zinc-700"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-8 px-3 text-xs bg-violet-600 hover:bg-violet-500 text-white font-medium"
+                    onClick={handleApplyCustom}
+                    disabled={!customFrom || statsLoading}
+                  >
+                    {statsLoading && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
+                    {tPeers("apply")}
+                  </Button>
+                </div>
+              )}
+
+              <UsageChart data={chartData} loading={statsLoading} />
             </div>
           </div>
         ) : (

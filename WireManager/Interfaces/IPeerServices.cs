@@ -18,6 +18,6 @@ namespace WireManager.Core.Interfaces
         Task<bool> TogglePeer(int id, bool status);
         Task<bool> IsPeerAuthorizedForDomain(string ip, string domain);
         Task<PeerStatsDTO> GetPeerStatsRealTimeAsync(int id);
-        Task<List<UsageHistory>?> GetPeerStatsAsync(int id);
+        Task<List<UsageHistory>?> GetPeerStatsAsync(int id, DateTime? from);
     }
 }
