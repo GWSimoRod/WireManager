@@ -9,6 +9,7 @@ import {
   Download,
   QrCode,
   Pencil,
+  Copy,
   Trash2,
   MoreHorizontal,
   CalendarClock,
@@ -115,6 +116,7 @@ export default function PeersPage() {
   // Peer modal state
   const [peerModalOpen, setPeerModalOpen] = useState(false);
   const [editingPeer, setEditingPeer] = useState<ConfPeer | null>(null);
+  const [duplicatePeer, setDuplicatePeer] = useState<ConfPeer | null>(null);
 
   // Confirm delete state
   const [deleteTarget, setDeleteTarget] = useState<ConfPeer | null>(null);
@@ -205,14 +207,22 @@ export default function PeersPage() {
     return tags.filter((t) => tagIds.includes(t.id));
   }
 
-  // ─── Create / Edit ────────────────────────────────────────────────────
+  // ─── Create / Edit / Duplicate ───────────────────────────────────────
   function handleOpenCreate() {
     setEditingPeer(null);
+    setDuplicatePeer(null);
     setPeerModalOpen(true);
   }
 
   function handleOpenEdit(peer: ConfPeer) {
     setEditingPeer(peer);
+    setDuplicatePeer(null);
+    setPeerModalOpen(true);
+  }
+
+  function handleOpenDuplicate(peer: ConfPeer) {
+    setEditingPeer(null);
+    setDuplicatePeer(peer);
     setPeerModalOpen(true);
   }
 
@@ -277,6 +287,7 @@ export default function PeersPage() {
       }
       setPeerModalOpen(false);
       setEditingPeer(null);
+      setDuplicatePeer(null);
       await fetchData();
     } catch (err) {
       const message =
@@ -511,6 +522,9 @@ export default function PeersPage() {
                           <Button variant="outline" size="icon-sm" className="bg-zinc-800/50 hover:bg-zinc-800 border-zinc-700" onClick={() => handleShowQrCode(peer)} title={tPeers("qrCode")}>
                             <QrCode className="h-4 w-4 text-zinc-400" />
                           </Button>
+                          <Button variant="outline" size="icon-sm" className="bg-zinc-800/50 hover:bg-zinc-800 border-zinc-700" onClick={() => handleOpenDuplicate(peer)} title={tCommon("duplicate")}>
+                            <Copy className="h-4 w-4 text-zinc-400" />
+                          </Button>
                           <Button variant="outline" size="icon-sm" className="bg-zinc-800/50 hover:bg-zinc-800 border-zinc-700" onClick={() => handleOpenEdit(peer)} title={tCommon("edit")}>
                             <Pencil className="h-4 w-4 text-zinc-400" />
                           </Button>
@@ -662,6 +676,12 @@ export default function PeersPage() {
                                 {tPeers("qrCode")}
                               </DropdownMenuItem>
                               <DropdownMenuItem
+                                onClick={() => handleOpenDuplicate(peer)}
+                              >
+                                <Copy className="mr-2 h-4 w-4" />
+                                {tCommon("duplicate")}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
                                 onClick={() => handleOpenEdit(peer)}
                               >
                                 <Pencil className="mr-2 h-4 w-4" />
@@ -740,11 +760,24 @@ export default function PeersPage() {
       {/* Modals */}
       <PeerModal
         open={peerModalOpen}
-        onOpenChange={setPeerModalOpen}
+        onOpenChange={(open) => {
+          setPeerModalOpen(open);
+          if (!open) {
+            setEditingPeer(null);
+            setDuplicatePeer(null);
+          }
+        }}
         peer={editingPeer}
+        duplicateFrom={duplicatePeer}
         servers={servers}
         tags={tags}
-        peerTagIds={editingPeer ? getPeerTagIds(editingPeer) : []}
+        peerTagIds={
+          editingPeer
+            ? getPeerTagIds(editingPeer)
+            : duplicatePeer
+            ? getPeerTagIds(duplicatePeer)
+            : []
+        }
         onSave={handleSavePeer}
       />
 

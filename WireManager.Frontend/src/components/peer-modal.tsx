@@ -48,6 +48,7 @@ interface PeerModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   peer?: ConfPeer | null
+  duplicateFrom?: ConfPeer | null
   servers: ConfServer[]
   tags: Tag[]
   peerTagIds: number[]
@@ -58,6 +59,7 @@ export function PeerModal({
   open,
   onOpenChange,
   peer = null,
+  duplicateFrom = null,
   servers,
   tags,
   peerTagIds,
@@ -83,7 +85,7 @@ export function PeerModal({
   // Minimum date for the custom picker (now)
   const minDateTime = useMemo(() => toDateTimeLocal(new Date()), [])
 
-  // Pre-fill form when editing
+  // Pre-fill form when editing or duplicating
   useEffect(() => {
     if (open && peer) {
       setClientName(peer.clientName)
@@ -105,7 +107,28 @@ export function PeerModal({
         setExpirePresetDays(null)
         setExpireCustom('')
       }
-    } else if (open && !peer) {
+    } else if (open && duplicateFrom) {
+      // User must enter clientName and address
+      setClientName('')
+      setAddress('')
+      setDnsAddress(duplicateFrom.dnsAddress || '')
+      setAllowedIPs(duplicateFrom.allowedIPs || '')
+      setConfServerId(String(duplicateFrom.confServerId))
+      setPersistentKeepAlive(duplicateFrom.persistentKeepAlive ? String(duplicateFrom.persistentKeepAlive) : '')
+      setSelectedTags(peerTagIds)
+
+      // Restore expiration state from duplicateFrom
+      if (duplicateFrom.expireAt) {
+        setExpireMode('custom')
+        setExpirePresetDays(null)
+        const dateStr = duplicateFrom.expireAt.endsWith('Z') ? duplicateFrom.expireAt : duplicateFrom.expireAt + 'Z'
+        setExpireCustom(toDateTimeLocal(new Date(dateStr)))
+      } else {
+        setExpireMode('none')
+        setExpirePresetDays(null)
+        setExpireCustom('')
+      }
+    } else if (open && !peer && !duplicateFrom) {
       setClientName('')
       setAddress('')
       setDnsAddress('')
@@ -117,7 +140,7 @@ export function PeerModal({
       setExpirePresetDays(null)
       setExpireCustom('')
     }
-  }, [open, peer, peerTagIds])
+  }, [open, peer, duplicateFrom, peerTagIds])
 
   const toggleTag = (id: number) => {
     setSelectedTags((prev) =>
@@ -371,7 +394,7 @@ export function PeerModal({
                   id="svc-expire-custom"
                   type="datetime-local"
                   value={expireCustom}
-                  min={minDateTime}
+                  min={expireCustom && expireCustom < minDateTime ? undefined : minDateTime}
                   onChange={(e) => setExpireCustom(e.target.value)}
                   className="mt-1"
                 />
