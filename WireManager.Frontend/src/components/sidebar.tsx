@@ -1,7 +1,7 @@
 'use client'
 
 import { Link, usePathname } from '@/i18n/routing'
-import { Shield, Monitor, Users, Tags, Server, LogOut, UserPlus } from 'lucide-react'
+import { Shield, Monitor, Users, Tags, Server, LogOut, UserPlus, ScrollText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/auth-context'
 import { cn } from '@/lib/utils'
@@ -22,6 +22,7 @@ export function SidebarContent({ onClick }: { onClick?: () => void }) {
   const adminLinks = [
     { href: '/dashboard', label: t('servers'), icon: Monitor },
     { href: '/users', label: t('users'), icon: UserPlus },
+    { href: '/audit', label: t('audit'), icon: ScrollText },
   ]
 
   return (

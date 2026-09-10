@@ -9,11 +9,12 @@ using WireManager.Core.Utils;
 
 namespace WireManager.Core.Services
 {
-    public class ServerServices(IWireguardOps wireguard, ILogger<ServerServices> logger, WireManagerContext context) : IServerServices
+    public class ServerServices(IWireguardOps wireguard, ILogger<ServerServices> logger, WireManagerContext context, IAuditServices auditServices) : IServerServices
     {
         private readonly ILogger<ServerServices> _logger = logger;
         private readonly IWireguardOps _wireguard = wireguard;
         private readonly WireManagerContext _context = context;
+        private readonly IAuditServices _auditServices = auditServices;
 
         public async Task<List<ConfServer>> GetAllServerAsync()
         {
@@ -52,6 +53,13 @@ namespace WireManager.Core.Services
 
             if (server == null)
             {
+                await _auditServices.AuditLog(
+                    "Server.Create",
+                    "Server",
+                    null,
+                    false,
+                    "Attempted to create a server with null data"
+                );
                 return null;
             }
 
@@ -59,6 +67,13 @@ namespace WireManager.Core.Services
 
             if (!NetworkOps.IsValidCidrIp(server.rangeIP))
             {
+                await _auditServices.AuditLog(
+                    "Server.Create",
+                    "Server",
+                    null,
+                    false,
+                    $"Attempted to create a server with invalid CIDR IP range: {server.rangeIP}"
+                );
                 throw new ArgumentException($"Invalid CIDR IP range: {server.rangeIP}");
             }
 
@@ -92,8 +107,23 @@ namespace WireManager.Core.Services
                 await _wireguard.StartWireGuardInterfaceAsync(cServer.Id);
             } catch (Exception ex)
             {
+                await _auditServices.AuditLog(
+                    "Server.Create",
+                    "Server",
+                    cServer.Id.ToString(),
+                    false,
+                    $"Error starting WireGuard interface for server with Id {cServer.Id}: {ex.Message}"
+                );
                 throw new InvalidOperationException($"Error starting WireGuard interface for server with Id {cServer.Id}: {ex.Message}", ex);
             }
+
+            await _auditServices.AuditLog(
+                "Server.Create",
+                "Server",
+                cServer.Id.ToString(),
+                true,
+                null
+            );
 
             return cServer;
 
@@ -107,6 +137,13 @@ namespace WireManager.Core.Services
             }
             catch (Exception ex)
             {
+                await _auditServices.AuditLog(
+                    "Server.Delete",
+                    "Server",
+                    Id.ToString(),
+                    false,
+                    $"Error stopping WireGuard interface for server with Id {Id}: {ex.Message}"
+                );
                 throw new InvalidOperationException($"Error stopping WireGuard interface for server with Id {Id}: {ex.Message}", ex);
             }
 
@@ -116,6 +153,13 @@ namespace WireManager.Core.Services
                 var server = await _context.ConfServers.FindAsync(Id);
                 if (server == null)
                 {
+                    await _auditServices.AuditLog(
+                        "Server.Delete",
+                        "Server",
+                        Id.ToString(),
+                        false,
+                        $"Attempted to delete a server with Id {Id} that does not exist"
+                    );
                     throw new KeyNotFoundException($"Server with Id {Id} not found");
                 }
                 _context.ConfServers.Remove(server);
@@ -124,6 +168,13 @@ namespace WireManager.Core.Services
             }
             catch (Exception ex) when (ex is not KeyNotFoundException)
             {
+                await _auditServices.AuditLog(
+                    "Server.Delete",
+                    "Server",
+                    Id.ToString(),
+                    false,
+                    $"Error deleting server with Id {Id} from database: {ex.Message}"
+                );
                 // Cattura tutto tranne KeyNotFoundException, impacchettandolo in una InvalidOperationException
                 throw new InvalidOperationException($"Error deleting server with Id {Id} from database: {ex.Message}", ex);
             }
@@ -138,9 +189,24 @@ namespace WireManager.Core.Services
             }
             catch (Exception ex)
             {
+                await _auditServices.AuditLog(
+                    "Server.Delete",
+                    "Server",
+                    Id.ToString(),
+                    false,
+                    $"Error deleting server configuration file for server with Id {Id}: {ex.Message}"
+                );
                 _logger.LogInformation($"[Warning] Server {Id} rimosso dal DB ma non dal disco");
                 throw new InvalidOperationException($"Error deleting server configuration file for server with Id {Id}: {ex.Message}", ex);
             }
+
+            await _auditServices.AuditLog(
+                "Server.Delete",
+                "Server",
+                Id.ToString(),
+                true,
+                null
+            );
 
         }
 
@@ -153,6 +219,13 @@ namespace WireManager.Core.Services
 
             if (!NetworkOps.TryParseEndpoint(server.EndPoint, server.listenPort, out string cleanEndpoint))
             {
+                await _auditServices.AuditLog(
+                    "Server.Update",
+                    "Server",
+                    Id.ToString(),
+                    false,
+                    $"Attempted to update server with Id {Id} with invalid endpoint format: {server.EndPoint}"
+                );
                 throw new InvalidOperationException("Invalid endpoint format");
             }
 
@@ -162,6 +235,13 @@ namespace WireManager.Core.Services
 
             if (srvDB == null)
             {
+                await _auditServices.AuditLog(
+                    "Server.Update",
+                    "Server",
+                    Id.ToString(),
+                    false,
+                    $"Attempted to update a server with Id {Id} that does not exist"
+                );
                 throw new InvalidOperationException($"Server with Id {Id} not found");
             }
 
@@ -230,6 +310,7 @@ namespace WireManager.Core.Services
 
                 // Se tutto è andato a buon fine, confermiamo la transazione sul DB
                 await transaction.CommitAsync();
+
             }
             catch (Exception ex)
             {
@@ -249,8 +330,23 @@ namespace WireManager.Core.Services
                 }
                 catch (Exception fileEx)
                 {
+                    await _auditServices.AuditLog(
+                        "Server.Update",
+                        "Server",
+                        Id.ToString(),
+                        false,
+                        $"Critical Error: DB rolled back but file system rollback failed for server with Id {Id}: {fileEx.Message}"
+                    );
                     throw new InvalidOperationException($"Critical Error: DB rolled back but file system rollback failed: {fileEx.Message}", fileEx);
                 }
+
+                await _auditServices.AuditLog(
+                    "Server.Update",
+                    "Server",
+                    Id.ToString(),
+                    false,
+                    $"Error updating server with Id {Id}: {ex.Message}"
+                );
 
                 throw new InvalidOperationException($"Error updating server with Id {Id}: {ex.Message}", ex);
             }
@@ -262,8 +358,24 @@ namespace WireManager.Core.Services
             }
             catch (Exception syncEx)
             {
+                await _auditServices.AuditLog(
+                    "Server.Update",
+                    "Server",
+                    Id.ToString(),
+                    false,
+                    $"Error syncing server with Id {Id}: {syncEx.Message}"
+                );
+
                 throw new InvalidOperationException($"Error syncing server with Id {Id}: {syncEx.Message}", syncEx);
             }
+
+            await _auditServices.AuditLog(
+                "Server.Update",
+                "Server",
+                Id.ToString(),
+                true,
+                null
+            );
 
             return srvDB;
         }

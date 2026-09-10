@@ -11,13 +11,14 @@ using Org.BouncyCastle.Utilities;
 
 namespace WireManager.Core.Services
 {
-    public class PeerServices(IPolicyServices policyServices, WireManagerContext context, IFirewallServices firewall, IWireguardOps wireguard, ILogger<PeerServices> logger) : IPeerServices
+    public class PeerServices(IPolicyServices policyServices, WireManagerContext context, IFirewallServices firewall, IWireguardOps wireguard, ILogger<PeerServices> logger, IAuditServices auditServices) : IPeerServices
     {
         private readonly ILogger<PeerServices> _logger = logger;
         private readonly IPolicyServices _policyServices = policyServices;
         private readonly WireManagerContext _context = context;
         private readonly IFirewallServices _firewall = firewall;
         private readonly IWireguardOps _wireguard = wireguard;
+        private readonly IAuditServices _auditServices = auditServices;
 
         public async Task<(List<ConfPeer> Peers, int totalCount)> GetAllPeerAsync(int start, int end, string? searchTerm)
         {
@@ -100,6 +101,13 @@ namespace WireManager.Core.Services
         {
             if (peerDto == null)
             {
+                await _auditServices.AuditLog(
+                    "Peer.Create",
+                    "Peer",
+                    null,
+                    false,
+                    "The peer parameter cannot be null."
+                );
                 throw new ArgumentNullException(nameof(peerDto), "The peer parameter cannot be null.");
             }
 
@@ -110,18 +118,39 @@ namespace WireManager.Core.Services
             }
             else if (!peerDto.AllowedIPs.Contains("/"))
             {
+                await _auditServices.AuditLog(
+                    "Peer.Create",
+                    "Peer",
+                    null,
+                    false,
+                    "The AllowedIPs field must contain a valid subnet (e.g. /24 or /32)."
+                );
                 throw new ArgumentException("The AllowedIPs field must contain a valid subnet (e.g. /24 or /32).");
             }
 
             // controllo che ConfServerId sia valorizzato
             if(peerDto.ConfServerId == null)
             {
+                await _auditServices.AuditLog(
+                    "Peer.Create",
+                    "Peer",
+                    null,
+                    false,
+                    "The ConfServerId field must be provided."
+                );
                 throw new ArgumentException("The ConfServerId field must be provided.");
             }
 
             // controllo che non esista già un peer con lo stesso nome (anche sanitized)
             if(await ExistPeerByName(peerDto.ClientName))
             {
+                await _auditServices.AuditLog(
+                    "Peer.Create",
+                    "Peer",
+                    null,
+                    false,
+                    $"A peer with the name {peerDto.ClientName} already exists."
+                );
                 throw new InvalidOperationException($"A peer with the name {peerDto.ClientName} already exists.");
             }
 
@@ -132,6 +161,13 @@ namespace WireManager.Core.Services
 
             if (server == null)
             {
+                await _auditServices.AuditLog(
+                    "Peer.Create",
+                    "Peer",
+                    null,
+                    false,
+                    $"Cannot find server with Id: {peerDto.ConfServerId}"
+                );
                 throw new KeyNotFoundException($"Cannot find server with Id: {peerDto.ConfServerId}");
             }
 
@@ -143,12 +179,26 @@ namespace WireManager.Core.Services
 
                 if (!NetworkOps.IsInSameSubnet(peerDto.Address, range))
                 {
+                    await _auditServices.AuditLog(
+                        "Peer.Create",
+                        "Peer",
+                        null,
+                        false,
+                        $"The IP address {peerDto.Address} is not in the same subnet as the server {range}."
+                    );
                     throw new InvalidOperationException($"The IP address {peerDto.Address} is not in the same subnet as the server {range}.");
                 }
 
                 // controllo che l'ip non appartenga al server
                 if (peerDto.Address.Split("/")[0].Equals(server.rangeIP.Split("/")[0]))
                 {
+                    await _auditServices.AuditLog(
+                        "Peer.Create",
+                        "Peer",
+                        null,
+                        false,
+                        $"The IP address {peerDto.Address} cannot be the same as the server {server.rangeIP}."
+                    );
                     throw new InvalidOperationException($"The IP address {peerDto.Address} cannot be the same as the server {server.rangeIP}.");
                 }
 
@@ -157,6 +207,13 @@ namespace WireManager.Core.Services
 
                 if(existingPeer != null)
                 {
+                    await _auditServices.AuditLog(
+                        "Peer.Create",
+                        "Peer",
+                        null,
+                        false,
+                        $"The IP address {peerDto.Address} is already assigned to the peer {existingPeer.ClientName}."
+                    );
                     throw new InvalidOperationException($"The IP address {peerDto.Address} is already assigned to the peer {existingPeer.ClientName}.");
                 }
 
@@ -190,6 +247,13 @@ namespace WireManager.Core.Services
                 {
                     if (string.IsNullOrWhiteSpace(range))
                     {
+                        await _auditServices.AuditLog(
+                            "Peer.Create",
+                            "Peer",
+                            null,
+                            false,
+                            "The server subnet is not configured or is invalid."
+                        );
                         throw new InvalidOperationException("The server subnet is not configured or is invalid.");
                     }
 
@@ -233,6 +297,13 @@ namespace WireManager.Core.Services
             // Ultimo controllo di sicurezza sulla subnet
             if (!NetworkOps.IsInSameSubnet(newPeer.Address.Split("/")[0], server.rangeIP))
             {
+                await _auditServices.AuditLog(
+                    "Peer.Create",
+                    "Peer",
+                    null,
+                    false,
+                    $"The IP address {newPeer.Address} is not in the same subnet as the server {server.rangeIP}."
+                );
                 throw new InvalidOperationException($"The IP address {newPeer.Address} is not in the same subnet as the server {server.rangeIP}.");
             }
 
@@ -254,6 +325,14 @@ namespace WireManager.Core.Services
 
             await _firewall.UpdateFirewall($"server_{newPeer.ConfServerId}");
 
+            await _auditServices.AuditLog(
+                "Peer.Create",
+                "Peer",
+                newPeer.Id.ToString(),
+                true,
+                null
+            );
+
             return newPeer;
             
         }
@@ -263,6 +342,13 @@ namespace WireManager.Core.Services
             var peer = await _context.ConfPeers.FindAsync(id);
             if (peer == null)
             {
+                await _auditServices.AuditLog(
+                    "Peer.Delete",
+                    "Peer",
+                    id.ToString(),
+                    false,
+                    $"Peer with Id {id} not found."
+                );
                 throw new KeyNotFoundException($"Peer with Id {id} not found.");
             }
 
@@ -275,6 +361,13 @@ namespace WireManager.Core.Services
             }
             catch (Exception ex)
             {
+                await _auditServices.AuditLog(
+                    "Peer.Delete",
+                    "Peer",
+                    id.ToString(),
+                    false,
+                    $"Error deleting configuration file of peer {peer.ClientName}: {ex.Message}"
+                );
                 throw new IOException($"Error deleting configuration file of peer {peer.ClientName}: {ex.Message}", ex);
             }
 
@@ -283,6 +376,13 @@ namespace WireManager.Core.Services
 
             if (!File.Exists(serverConfigFileName))
             {
+                await _auditServices.AuditLog(
+                    "Peer.Delete",
+                    "Peer",
+                    id.ToString(),
+                    false,
+                    $"The configuration file of the server {serverConfigFileName} does not exist."
+                );
                 throw new FileNotFoundException($"The configuration file of the server {serverConfigFileName} does not exist.");
             }
 
@@ -324,6 +424,13 @@ namespace WireManager.Core.Services
 
             if (removedCount == 0)
             {
+                await _auditServices.AuditLog(
+                    "Peer.Delete",
+                    "Peer",
+                    id.ToString(),
+                    false,
+                    $"No configuration block found for the peer {peer.ClientName} in the server file."
+                );
                 throw new InvalidOperationException($"No configuration block found for the peer {peer.ClientName} in the server file.");
             }
 
@@ -349,6 +456,14 @@ namespace WireManager.Core.Services
 
             // modifico il firewall
             await _firewall.UpdateFirewall($"server_{peer.ConfServerId}");
+
+            await _auditServices.AuditLog(
+                "Peer.Delete",
+                "Peer",
+                id.ToString(),
+                true,
+                null
+            );
 
             return true;
             
@@ -424,12 +539,26 @@ namespace WireManager.Core.Services
 
             if (String.IsNullOrWhiteSpace(peerDto.ClientName))
             {
+                await _auditServices.AuditLog(
+                    "Peer.Update",
+                    "Peer",
+                    id.ToString(),
+                    false,
+                    "The ClientName field cannot be empty."
+                );
                 throw new ArgumentException("The ClientName field cannot be empty.");
             }
 
             var existingPeer = await _context.ConfPeers.FindAsync(id);
             if (existingPeer == null)
             {
+                await _auditServices.AuditLog(
+                    "Peer.Update",
+                    "Peer",
+                    id.ToString(),
+                    false,
+                    $"Peer with Id {id} not found."
+                );
                 throw new KeyNotFoundException($"Peer with Id {id} not found.");
             }
 
@@ -442,6 +571,13 @@ namespace WireManager.Core.Services
 
             if (!File.Exists(peerConfigFileName))
             {
+                await _auditServices.AuditLog(
+                    "Peer.Update",
+                    "Peer",
+                    id.ToString(),
+                    false,
+                    $"The peer configuration file {peerConfigFileName} does not exist."
+                );
                 throw new KeyNotFoundException("The peer configuration file does not exist.");
             }
 
@@ -521,6 +657,13 @@ namespace WireManager.Core.Services
                 {
                     if (File.Exists(newPeerConfigFileName))
                     {
+                        await _auditServices.AuditLog(
+                            "Peer.Update",
+                            "Peer",
+                            id.ToString(),
+                            false,
+                            $"The configuration file with the new name {newPeerConfigFileName} already exists."
+                        );
                         throw new IOException($"The configuration file with the new name {newPeerConfigFileName} already exists.");
                     }
                     File.Move(peerConfigFileName, newPeerConfigFileName);
@@ -540,6 +683,15 @@ namespace WireManager.Core.Services
 
                 // Aggiorna l'interfaccia di rete di wireguard
                 await _wireguard.SyncServerAsync(existingPeer.ConfServerId);
+
+                await _auditServices.AuditLog(
+                    "Peer.Update",
+                    "Peer",
+                    id.ToString(),
+                    true,
+                    null
+                );
+
             }
             catch (Exception ex)
             {
@@ -568,11 +720,26 @@ namespace WireManager.Core.Services
                 }
                 catch (Exception fileEx)
                 {
+                    await _auditServices.AuditLog(
+                        "Peer.Update",
+                        "Peer",
+                        id.ToString(),
+                        false,
+                        $"Error restoring the peer configuration file: {fileEx.Message}"
+                    );
                     throw new IOException($"Error restoring the peer configuration file: {fileEx.Message}", fileEx);
                 }
 
                 // Sincronizza WireGuard per ripristinare lo stato coerente
                 await _wireguard.SyncServerAsync(existingPeer.ConfServerId);
+
+                await _auditServices.AuditLog(
+                    "Peer.Update",
+                    "Peer",
+                    id.ToString(),
+                    false,
+                    $"Error updating the peer: {ex.Message}"
+                );
 
                 throw new InvalidOperationException($"Error updating the peer: {ex.Message}", ex);
             }
@@ -586,6 +753,13 @@ namespace WireManager.Core.Services
             var peer = await GetPeerByIdAsync(peerId);
             if (peer == null)
             {
+                await _auditServices.AuditLog(
+                    "Peer.AddPolicy",
+                    "Peer",
+                    peerId.ToString(),
+                    false,
+                    $"Peer with Id {peerId} not found."
+                );
                 throw new KeyNotFoundException($"Peer with Id {peerId} not found.");
             }
 
@@ -593,6 +767,13 @@ namespace WireManager.Core.Services
             var policy = await _policyServices.GetTagByIdAsync(tagId);
             if (policy == null)
             {
+                await _auditServices.AuditLog(
+                    "Peer.AddPolicy",
+                    "Peer",
+                    peerId.ToString(),
+                    false,
+                    $"Policy (Tag) with Id {tagId} not found."
+                );
                 throw new KeyNotFoundException($"Policy (Tag) with Id {tagId} not found.");
             }
 
@@ -627,6 +808,14 @@ namespace WireManager.Core.Services
                 // Salvo i cambiamenti sul database
                 await transaction.CommitAsync();
 
+                await _auditServices.AuditLog(
+                    "Peer.AddPolicy",
+                    "Peer",
+                    peerId.ToString(),
+                    true,
+                    null
+                );
+
                 return true;
 
             }
@@ -634,6 +823,15 @@ namespace WireManager.Core.Services
             {
                 await transaction.RollbackAsync();
                 _context.ChangeTracker.Clear();
+
+                await _auditServices.AuditLog(
+                    "Peer.AddPolicy",
+                    "Peer",
+                    peerId.ToString(),
+                    false,
+                    $"Error applying policy to peer: {ex.Message}"
+                );
+
                 throw new InvalidOperationException($"Error applying policy to peer: {ex.Message}", ex);
             }
         }
@@ -644,12 +842,26 @@ namespace WireManager.Core.Services
             var peer = await GetPeerByIdAsync(peerId);
             if (peer == null)
             {
+                await _auditServices.AuditLog(
+                    "Peer.RemovePolicy",
+                    "Peer",
+                    peerId.ToString(),
+                    false,
+                    $"Peer with Id {peerId} not found."
+                );
                 throw new KeyNotFoundException($"Peer with Id {peerId} not found.");
             }
             // Controllo che la policy (tag) esista
             var policy = await _policyServices.GetTagByIdAsync(tagId);
             if (policy == null)
             {
+                await _auditServices.AuditLog(
+                    "Peer.RemovePolicy",
+                    "Peer",
+                    peerId.ToString(),
+                    false,
+                    $"Policy (Tag) with Id {tagId} not found."
+                );
                 throw new KeyNotFoundException($"Policy (Tag) with Id {tagId} not found.");
             }
             // Recupero l'associazione tra peer e policy
@@ -667,6 +879,14 @@ namespace WireManager.Core.Services
 
             // modifico il firewall
             await _firewall.UpdateFirewall($"server_{peer.ConfServerId}");
+
+            await _auditServices.AuditLog(
+                "Peer.RemovePolicy",
+                "Peer",
+                peerId.ToString(),
+                true,
+                null
+            );
 
             return rowsAffected > 0;
         }
@@ -702,6 +922,13 @@ namespace WireManager.Core.Services
                 var peer = await GetPeerByIdAsync(id);
                 if(peer == null)
                 {
+                    await _auditServices.AuditLog(
+                        "Peer.Toggle",
+                        "Peer",
+                        id.ToString(),
+                        false,
+                        $"Peer with Id {id} not found."
+                    );
                     return false;
                 }
 
@@ -776,11 +1003,28 @@ namespace WireManager.Core.Services
                 // sync la conf
 
                 await _wireguard.SyncServerAsync(serverID);
+                
+                await _auditServices.AuditLog(
+                    "Peer.Toggle",
+                    "Peer",
+                    id.ToString(),
+                    true,
+                    null
+                );
 
                 return true;
             }catch(Exception ex)
             {
                 _logger.LogInformation(ex.ToString());
+
+                await _auditServices.AuditLog(
+                    "Peer.Toggle",
+                    "Peer",
+                    id.ToString(),
+                    false,
+                    $"Error toggling peer: {ex.Message}"
+                );
+
                 throw new Exception(ex.ToString());
             }
 

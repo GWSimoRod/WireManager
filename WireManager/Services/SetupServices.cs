@@ -7,11 +7,12 @@ using WireManager.Core.Models;
 
 namespace WireManager.Core.Services
 {
-    public class SetupServices(WireManagerContext context, ILogger<SetupServices> logger) : ISetupServices
+    public class SetupServices(WireManagerContext context, ILogger<SetupServices> logger, IAuditServices auditServices) : ISetupServices
     {
         private readonly ILogger<SetupServices> _logger = logger;
 
         private readonly WireManagerContext _context = context;
+        private readonly IAuditServices _auditServices = auditServices;
 
         public async Task<bool> IsSystemConfiguredAsync()
         {
@@ -75,10 +76,25 @@ namespace WireManager.Core.Services
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
+                await _auditServices.AuditLog(
+                    "Setup.Perform",
+                    "Setup",
+                    null,
+                    true,
+                    null
+                );
+
                 return true;
             }
             catch (Exception ex)
             {
+                await _auditServices.AuditLog(
+                    "Setup.Perform",
+                    "Setup",
+                    null,
+                    false,
+                    ex.Message
+                );
                 _logger.LogInformation($"Errore durante la configurazione iniziale: {ex.Message}");
                 return false;
             }

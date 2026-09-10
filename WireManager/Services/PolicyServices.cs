@@ -8,15 +8,26 @@ using WireManager.Core.Interfaces;
 namespace WireManager.Core.Services
 {
 
-    public class PolicyServices(WireManagerContext context, IFirewallServices firewall, ILogger<PolicyServices> logger) : IPolicyServices
+    public class PolicyServices(WireManagerContext context, IFirewallServices firewall, ILogger<PolicyServices> logger, IAuditServices auditServices) : IPolicyServices
     {
         private readonly ILogger<PolicyServices> _logger = logger;
         private readonly WireManagerContext _context = context;
         private readonly IFirewallServices _firewall = firewall;
+        private readonly IAuditServices _auditServices = auditServices;
 
         public async Task<Tag> CreateTagWithServicesAsync(TagDTO tag)
         {
-            if (tag == null) throw new ArgumentNullException(nameof(tag));
+            if (tag == null)
+            {
+                await _auditServices.AuditLog(
+                    "Policy.CreateTag",
+                    "Tag",
+                    null,
+                    false,
+                    "Tag cannot be null"
+                );
+                throw new ArgumentNullException(nameof(tag));
+            }
 
             // Se sono stati passati dei servizi, verifichiamo che ESISTANO TUTTI prima di fare qualsiasi operazione
             if (tag.ServicesId != null && tag.ServicesId.Count > 0)
@@ -27,6 +38,13 @@ namespace WireManager.Core.Services
                 // Se il numero di servizi trovati nel DB non corrisponde a quelli richiesti, c'è un ID non valido
                 if (existingServicesCount != tag.ServicesId.Count)
                 {
+                    await _auditServices.AuditLog(
+                        "Policy.CreateTag",
+                        "Tag",
+                        null,
+                        false,
+                        "One or more specified service IDs are invalid."
+                    );
                     throw new ArgumentException("One or more specified service IDs are invalid.");
                 }
             }
@@ -54,6 +72,14 @@ namespace WireManager.Core.Services
                 await _context.SaveChangesAsync();
             }
 
+            await _auditServices.AuditLog(
+                "Policy.CreateTag",
+                "Tag",
+                newTag.Id.ToString(),
+                true,
+                null
+            );
+
             return newTag;
         }
 
@@ -62,6 +88,13 @@ namespace WireManager.Core.Services
             var tag = await _context.Tags.FindAsync(tagId);
             if (tag == null)
             {
+                await _auditServices.AuditLog(
+                    "Policy.DeleteTag",
+                    "Tag",
+                    tagId.ToString(),
+                    false,
+                    "Tag not found"
+                );
                 return false; // Tag non trovato
             }
 
@@ -85,6 +118,14 @@ namespace WireManager.Core.Services
                 await _firewall.UpdateFirewall($"server_{interfaceId}");
             }
 
+            await _auditServices.AuditLog(
+                "Policy.DeleteTag",
+                "Tag",
+                tagId.ToString(),
+                true,
+                null
+            );
+
             return true;
         }
 
@@ -92,6 +133,13 @@ namespace WireManager.Core.Services
         {
             if (service == null)
             {
+                await _auditServices.AuditLog(
+                    "Policy.CreateService",
+                    "Service",
+                    null,
+                    false,
+                    "Service cannot be null"
+                );
                 throw new ArgumentNullException(nameof(service));
             }
 
@@ -132,6 +180,14 @@ namespace WireManager.Core.Services
                 }
             }
 
+            await _auditServices.AuditLog(
+                "Policy.CreateService",
+                "Service",
+                newService.Id.ToString(),
+                true,
+                null
+            );
+
             return newService;
         }
 
@@ -140,6 +196,13 @@ namespace WireManager.Core.Services
             var service = await _context.Services.FindAsync(serviceId);
             if (service == null)
             {
+                await _auditServices.AuditLog(
+                    "Policy.DeleteService",
+                    "Service",
+                    serviceId.ToString(),
+                    false,
+                    "Service not found"
+                );
                 return false;
             }
 
@@ -182,6 +245,14 @@ namespace WireManager.Core.Services
                 await _firewall.UpdateFirewall($"server_{interfaceId}");
             }
 
+            await _auditServices.AuditLog(
+                "Policy.DeleteService",
+                "Service",
+                serviceId.ToString(),
+                true,
+                null
+            );
+
             return true;
         }
 
@@ -192,6 +263,13 @@ namespace WireManager.Core.Services
 
             if (tagService == null)
             {
+                await _auditServices.AuditLog(
+                    "Policy.RemoveServiceFromTag",
+                    "TagService",
+                    tagId.ToString(),
+                    false,
+                    "No association found between tag and service."
+                );
                 throw new ArgumentException($"No association found between tag with ID {tagId} and service with ID {serviceId}.");
             }
 
@@ -215,6 +293,14 @@ namespace WireManager.Core.Services
                 await _firewall.UpdateFirewall($"server_{interfaceId}");
             }
 
+            await _auditServices.AuditLog(
+                "Policy.RemoveServiceFromTag",
+                "TagService",
+                tagId.ToString(),
+                true,
+                null
+            );
+
             return true;
 
         }
@@ -222,11 +308,28 @@ namespace WireManager.Core.Services
         public async Task<bool> UpdateTagAsync(int tagId, TagDTO tag)
         {
 
-            if (tag == null) throw new ArgumentNullException("The tag cannot be empty.");
+            if (tag == null)
+            {
+                await _auditServices.AuditLog(
+                    "Policy.UpdateTag",
+                    "Tag",
+                    tagId.ToString(),
+                    false,
+                    "Tag cannot be null"
+                );
+                throw new ArgumentNullException("The tag cannot be empty.");
+            }
 
             var existingTag = await _context.Tags.FindAsync(tagId);
             if (existingTag == null)
             {
+                await _auditServices.AuditLog(
+                    "Policy.UpdateTag",
+                    "Tag",
+                    tagId.ToString(),
+                    false,
+                    "Tag not found"
+                );
                 throw new ArgumentException($"Tag with ID {tagId} not found.");
             }
             existingTag.Name = tag.Name;
@@ -245,6 +348,13 @@ namespace WireManager.Core.Services
                         .CountAsync(s => uniqueServiceIds.Contains(s.Id));
                     if (existingServicesCount != uniqueServiceIds.Count)
                     {
+                        await _auditServices.AuditLog(
+                            "Policy.UpdateTag",
+                            "Tag",
+                            tagId.ToString(),
+                            false,
+                            "One or more specified service IDs are invalid."
+                        );
                         throw new ArgumentException("One or more specified service IDs are invalid.");
                     }
                 }
@@ -281,6 +391,14 @@ namespace WireManager.Core.Services
                 }
             }
 
+            await _auditServices.AuditLog(
+                "Policy.UpdateTag",
+                "Tag",
+                tagId.ToString(),
+                true,
+                null
+            );
+
             return true;
         }
 
@@ -315,18 +433,42 @@ namespace WireManager.Core.Services
 
         public async Task<bool> CreatePolicyAsync(PolicyDTO policy)
         {
-            if (policy == null) throw new ArgumentNullException(nameof(policy));
+            if (policy == null)
+            {
+                await _auditServices.AuditLog(
+                    "Policy.CreatePolicy",
+                    "Policy",
+                    null,
+                    false,
+                    "Policy cannot be null"
+                );
+                throw new ArgumentNullException(nameof(policy));
+            }
 
             // Controllo che il tag esista
             var tagExists = await _context.Tags.AnyAsync(t => t.Id == policy.TagID);
             if (!tagExists)
             {
+                await _auditServices.AuditLog(
+                    "Policy.CreatePolicy",
+                    "Policy",
+                    policy.TagID.ToString(),
+                    false,
+                    "Tag not found"
+                );
                 throw new ArgumentException($"Tag with ID {policy.TagID} not found.");
             }
 
             // Controllo che la lista dei servizi non sia vuota o nulla
             if (policy.ServiceId == null || policy.ServiceId.Count == 0)
             {
+                await _auditServices.AuditLog(
+                    "Policy.CreatePolicy",
+                    "Policy",
+                    policy.TagID.ToString(),
+                    false,
+                    "At least one service ID must be specified."
+                );
                 throw new ArgumentException("At least one service ID must be specified.");
             }
 
@@ -339,6 +481,13 @@ namespace WireManager.Core.Services
 
             if (existingServicesCount != uniqueServiceIds.Count)
             {
+                await _auditServices.AuditLog(
+                    "Policy.CreatePolicy",
+                    "Policy",
+                    policy.TagID.ToString(),
+                    false,
+                    "One or more specified service IDs are invalid or do not exist."
+                );
                 throw new ArgumentException("One or more specified service IDs are invalid or do not exist.");
             }
 
@@ -370,6 +519,14 @@ namespace WireManager.Core.Services
             // Aggiungo al contesto e salvo
             await _context.TagServices.AddRangeAsync(newTagServices);
             var rowsAffected = await _context.SaveChangesAsync();
+
+            await _auditServices.AuditLog(
+                "Policy.CreatePolicy",
+                "Policy",
+                policy.TagID.ToString(),
+                rowsAffected > 0,
+                rowsAffected > 0 ? null : "No new associations were created."
+            );
 
             return rowsAffected > 0;
         }

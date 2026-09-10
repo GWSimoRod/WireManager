@@ -156,6 +156,19 @@ export interface UserInfo {
   role: string;
 }
 
+// ─── Audit ──────────────────────────────────────────────────────────
+export interface AuditLog {
+  id: number;
+  timestamp: string;
+  actorId: string;
+  actorType: string;
+  action: string;
+  entity: string;
+  entityId: string | null;
+  isSuccess: boolean;
+  details: string | null;
+}
+
 // ─── API Response Helpers ────────────────────────────────────────────
 export interface ApiError {
   message: string;

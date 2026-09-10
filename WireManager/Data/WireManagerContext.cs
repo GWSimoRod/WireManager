@@ -15,6 +15,7 @@ namespace WireManager.Core.Data
         public DbSet<TagService> TagServices { get; set; }
         public DbSet<SystemConfig> SystemConfigs { get; set; }
         public DbSet<UsageHistory> UsageHistories { get; set; }
+        public DbSet<Audit> Audits { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -100,6 +101,9 @@ namespace WireManager.Core.Data
             modelBuilder.Entity<ConfPeer>()
                 .Property(p => p.PersistentKeepAlive)
                 .HasDefaultValue(0);
+
+            modelBuilder.Entity<Audit>()
+                .HasKey(a => a.Id);
 
         }
 

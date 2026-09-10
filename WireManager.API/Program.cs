@@ -26,6 +26,8 @@ builder.Services.AddDbContext<WireManagerContext>();
 // Abilitazione specifiche OpenAPI (Swagger)
 builder.Services.AddOpenApi();
 
+builder.Services.AddHttpContextAccessor();
+
 // Registrazione dei servizi Core nel container di Dependency Injection
 builder.Services.AddScoped<IPeerServices, PeerServices>();
 builder.Services.AddScoped<IServerServices, ServerServices>();
@@ -34,6 +36,7 @@ builder.Services.AddScoped<IPolicyServices, PolicyServices>();
 builder.Services.AddScoped<IFirewallServices, FirewallServices>();
 builder.Services.AddScoped<ISetupServices, SetupServices>();
 builder.Services.AddScoped<IWireguardOps, WireguardOps>();
+builder.Services.AddScoped<IAuditServices, AuditServices>();
 
 // Gestione della cartella base e della chiave segreta per il JWT
 var baseFolder = DiskOps._baseFolderPathServer;

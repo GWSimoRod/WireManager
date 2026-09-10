@@ -17,6 +17,7 @@ import type {
   PeerLiveStats,
   CreateUserRequest,
   UserInfo,
+  AuditLog,
 } from "./types";
 
 export interface PaginatedResult<T> {
@@ -400,6 +401,58 @@ export async function submitSetup(data: SetupRequest): Promise<void> {
     }
     throw new ApiClientError(message, res.status);
   }
+}
+
+// ─── Audit ───────────────────────────────────────────────────────────
+export async function getAuditLogs(
+  pageNumber?: number,
+  pageSize?: number
+): Promise<PaginatedResult<AuditLog>> {
+  const query = new URLSearchParams();
+  if (pageNumber !== undefined) query.append("pageNumber", pageNumber.toString());
+  if (pageSize !== undefined) query.append("pageSize", pageSize.toString());
+
+  const queryString = query.toString();
+  const path = queryString ? `/api/audit?${queryString}` : "/api/audit";
+
+  const res = await fetch(path, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (res.status === 401) {
+    if (typeof window !== "undefined") {
+      fetch("/api/auth/logout", { method: "POST" }).finally(() => {
+        window.location.href = "/login";
+      });
+    }
+    throw new ApiClientError("Non autenticato", 401);
+  }
+
+  if (!res.ok) {
+    let message = `Errore ${res.status}`;
+    try {
+      const errorData = await res.text();
+      if (errorData) message = errorData;
+    } catch {
+      // ignore
+    }
+    throw new ApiClientError(message, res.status);
+  }
+
+  const json = await res.json();
+  if (Array.isArray(json)) {
+    return {
+      data: json,
+      totalCount: null,
+    };
+  }
+
+  return {
+    data: json.data ?? [],
+    totalCount: json.totalCount ?? null,
+  };
 }
 
 export { ApiClientError };
