@@ -1,6 +1,8 @@
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.EntityFrameworkCore;
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -22,13 +24,15 @@ namespace WireManager.Core.Services
         private readonly IConfiguration _configuration;
         private readonly SymmetricSecurityKey _jwtKey;
         private readonly IAuditServices _auditServices;
+        private readonly IOptionsMonitorCache<OpenIdConnectOptions> _oidcOptionCache;
 
-        public AuthServices(WireManagerContext context, IConfiguration configuration, ILogger<AuthServices> logger, SymmetricSecurityKey jwtKey, IAuditServices auditServices) {
+        public AuthServices(WireManagerContext context, IConfiguration configuration, ILogger<AuthServices> logger, SymmetricSecurityKey jwtKey, IAuditServices auditServices, IOptionsMonitorCache<OpenIdConnectOptions> oidcOptionCache) {
             _logger = logger;
             _context = context;
             _configuration = configuration;
             _jwtKey = jwtKey;
             _auditServices = auditServices;
+            _oidcOptionCache = oidcOptionCache;
         }
 
         public async Task<AuthResponseDTO> LoginAsync(string username, string password) {
@@ -329,6 +333,9 @@ namespace WireManager.Core.Services
                 await _context.AuthenticationSSOs.AddAsync(ssoConfig);
             }
             await _context.SaveChangesAsync();
+
+            // Clear the OIDC options cache to ensure the new configuration is applied
+            _oidcOptionCache.TryRemove(OpenIdConnectDefaults.AuthenticationScheme);
 
             await _auditServices.AuditLog(
                 "Auth.UpdateSSO",
