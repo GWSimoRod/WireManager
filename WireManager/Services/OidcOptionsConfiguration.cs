@@ -99,13 +99,8 @@ namespace WireManager.Core.Services
             {
                 var request = context.HttpContext.Request;
 
-                Console.WriteLine(
-                    $"[OIDC] Method: {request.Method}"
-                );
-
-                Console.WriteLine(
-                    $"[OIDC] Content-Type: {request.ContentType}"
-                );
+                Console.WriteLine($"[OIDC] Method: {request.Method}");
+                Console.WriteLine($"[OIDC] Content-Type: {request.ContentType}");
 
                 Console.WriteLine(
                     $"[OIDC] Protocol State: {!string.IsNullOrEmpty(context.ProtocolMessage.State)}"
@@ -119,19 +114,17 @@ namespace WireManager.Core.Services
                 {
                     var form = await request.ReadFormAsync();
 
-                    var formState = form["state"].FirstOrDefault();
-                    var formCode = form["code"].FirstOrDefault();
+                    foreach (var key in form.Keys)
+                    {
+                        Console.WriteLine($"[OIDC] Form key: {key}");
+                    }
 
                     Console.WriteLine(
-                        $"[OIDC] Form State: {!string.IsNullOrEmpty(formState)}"
+                        $"[OIDC] Form State: {form.ContainsKey("state")}"
                     );
 
                     Console.WriteLine(
-                        $"[OIDC] Form State Length: {formState?.Length ?? 0}"
-                    );
-
-                    Console.WriteLine(
-                        $"[OIDC] Form Code: {!string.IsNullOrEmpty(formCode)}"
+                        $"[OIDC] Form State Length: {form["state"].FirstOrDefault()?.Length ?? 0}"
                     );
                 }
             };
