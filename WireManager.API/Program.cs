@@ -1,7 +1,8 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
-using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Cryptography;
 using System.Text;
@@ -121,6 +122,17 @@ builder.Services.AddSingleton<IConfigureOptions<OpenIdConnectOptions>, OidcOptio
 builder.Services.AddHostedService<PeerExpirationWorker>();
 builder.Services.AddHostedService<PeerUsageServices>();
 
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor |
+        ForwardedHeaders.XForwardedProto |
+        ForwardedHeaders.XForwardedHost;
+
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 var app = builder.Build();
 
 // Operazioni di inizializzazione post-build (Database, Path, Firewall)
@@ -185,6 +197,8 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     // app.UseSwaggerUI(); 
 }
+
+app.UseForwardedHeaders();
 
 // app.UseHttpsRedirection();
 app.UseAuthentication();
