@@ -51,7 +51,7 @@ namespace WireManager.API.Controllers
             catch (Exception ex)
             {
                 Console.WriteLine("[Auth]: Creazione di un nuovo account fallito: " + ex.Message);
-                return Unauthorized(ex.Message);
+                return BadRequest(ex.Message);
             }
         }
 
@@ -75,8 +75,8 @@ namespace WireManager.API.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine("[Auth]: Creazione di un nuovo account fallito: " + ex.Message);
-                return Unauthorized(ex.Message);
+                Console.WriteLine("[Auth]: Errore durante l'operazione: " + ex.Message);
+                return BadRequest(ex.Message);
             }
         }
 
