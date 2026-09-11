@@ -68,6 +68,19 @@ namespace WireManager.Core.Services
 
                 return Task.CompletedTask;
             };
+
+            options.Events.OnRedirectToIdentityProvider = context =>
+            {
+                var backendUrl = Environment.GetEnvironmentVariable("BACKEND_URL");
+
+                if (!string.IsNullOrWhiteSpace(backendUrl))
+                {
+                    context.ProtocolMessage.RedirectUri =
+                        $"{backendUrl.TrimEnd('/')}{context.Options.CallbackPath}";
+                }
+
+                return Task.CompletedTask;
+            };
         }
     }
 }
