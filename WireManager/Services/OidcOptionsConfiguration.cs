@@ -44,6 +44,7 @@ namespace WireManager.Core.Services
             options.ClientSecret = settings.OidcClientSecret;
 
             options.ResponseType = "code";
+            options.ResponseMode = "form_post";
             options.UsePkce = true;
 
             options.SaveTokens = true;
@@ -78,6 +79,23 @@ namespace WireManager.Core.Services
                     context.ProtocolMessage.RedirectUri =
                         $"{backendUrl.TrimEnd('/')}{context.Options.CallbackPath}";
                 }
+
+                return Task.CompletedTask;
+            };
+
+            options.Events.OnMessageReceived = context =>
+            {
+                Console.WriteLine(
+                    $"[OIDC] State: {context.ProtocolMessage.State}"
+                );
+
+                Console.WriteLine(
+                    $"[OIDC] Code presente: {!string.IsNullOrEmpty(context.ProtocolMessage.Code)}"
+                );
+
+                Console.WriteLine(
+                    $"[OIDC] Request method: {context.HttpContext.Request.Method}"
+                );
 
                 return Task.CompletedTask;
             };
