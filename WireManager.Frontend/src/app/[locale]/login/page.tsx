@@ -49,11 +49,7 @@ function LoginForm() {
 
   function handleSSOLogin() {
     setIsSSOSubmitting(true);
-    const targetUrl =
-      ssoLoginUrl ||
-      (process.env.BACKEND_URL
-        ? `${process.env.BACKEND_URL.replace(/\/+$/, "")}/api/Auth/sso/login`
-        : "/api/auth/sso/login");
+    const targetUrl = ssoLoginUrl || "/api/auth/sso/login";
     window.location.href = targetUrl;
   }
 

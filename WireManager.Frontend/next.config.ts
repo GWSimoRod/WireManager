@@ -9,9 +9,6 @@ if (process.env.NODE_ENV === 'development') {
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  env: {
-    BACKEND_URL: process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "",
-  },
 };
 
 export default withNextIntl(nextConfig);

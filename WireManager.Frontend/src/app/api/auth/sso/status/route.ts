@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
-import { getApiBaseUrl } from '@/lib/env';
+import { getApiBaseUrl, getBackendUrl } from '@/lib/env';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const apiBase = getApiBaseUrl();
-  const backendUrl = (process.env.BACKEND_URL || apiBase).replace(/\/+$/, '');
-  const ssoUrl = `${backendUrl}/api/Auth/sso/login`;
+  const ssoUrl = `${getBackendUrl()}/api/Auth/sso/login`;
 
   try {
     const res = await fetch(`${apiBase}/api/Auth/sso/status`, {
