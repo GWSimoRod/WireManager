@@ -245,9 +245,9 @@ namespace WireManager.API.Controllers
 
                 // Take url from environment variable
 
-                var redirectUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:3000/sso-login";
+                var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL")?.TrimEnd('/') ?? "http://localhost:3000";
 
-                return Redirect($"{redirectUrl}/sso-login?token=" + authSSOResponse.Token);
+                return Redirect($"{frontendUrl}/sso-login?token=" + authSSOResponse.Token);
 
             }
             catch (Exception ex)
