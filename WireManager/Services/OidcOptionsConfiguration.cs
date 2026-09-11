@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System.Security.Claims;
@@ -95,40 +95,13 @@ namespace WireManager.Core.Services
                 return Task.CompletedTask;
             };
 
-            options.Events.OnMessageReceived = async context =>
+            options.Events.OnMessageReceived = context =>
             {
-                var request = context.HttpContext.Request;
-
-                Console.WriteLine($"[OIDC] Method: {request.Method}");
-                Console.WriteLine($"[OIDC] Content-Type: {request.ContentType}");
-
                 Console.WriteLine(
-                    $"[OIDC] Protocol State: {!string.IsNullOrEmpty(context.ProtocolMessage.State)}"
+                    $"[OIDC] Callback received: {context.HttpContext.Request.Method} {context.HttpContext.Request.ContentType}"
                 );
 
-                Console.WriteLine(
-                    $"[OIDC] Protocol Code: {!string.IsNullOrEmpty(context.ProtocolMessage.Code)}"
-                );
-
-                if (request.HasFormContentType)
-                {
-                    var form = await request.ReadFormAsync();
-
-                    var formState = form["state"].FirstOrDefault();
-                    var formCode = form["code"].FirstOrDefault();
-
-                    Console.WriteLine($"[OIDC] Form State: {!string.IsNullOrEmpty(formState)}");
-                    Console.WriteLine($"[OIDC] Form State Length: {formState?.Length ?? 0}");
-                    Console.WriteLine($"[OIDC] Form Code: {!string.IsNullOrEmpty(formCode)}");
-
-                    if (!string.IsNullOrEmpty(formState) &&
-                        string.IsNullOrEmpty(context.ProtocolMessage.State))
-                    {
-                        context.ProtocolMessage.State = formState;
-
-                        Console.WriteLine("[OIDC] State copiato manualmente nel ProtocolMessage");
-                    }
-                }
+                return Task.CompletedTask;
             };
         }
     }

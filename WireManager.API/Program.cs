@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -69,6 +70,17 @@ var symmetricSecurityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKe
 
 // Registrazione della chiave come singleton per eventuale riutilizzo
 builder.Services.AddSingleton(symmetricSecurityKey);
+
+// Persistenza delle Data Protection keys per stabilità tra i restart del container
+var dataProtectionKeysPath = Path.Combine(baseFolder, "dp-keys");
+if (!Directory.Exists(dataProtectionKeysPath))
+{
+    Directory.CreateDirectory(dataProtectionKeysPath);
+}
+
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath))
+    .SetApplicationName("WireManager");
 
 // Configurazione dell'autenticazione tramite Bearer Token
 builder.Services.AddAuthentication(options =>
