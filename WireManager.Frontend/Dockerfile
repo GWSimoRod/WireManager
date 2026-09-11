@@ -15,8 +15,10 @@ COPY . .
 
 # Build-time env defaults (overridable via --build-arg)
 ARG API_BASE_URL=http://localhost:7254
+ARG BACKEND_URL=http://localhost:7254
 
 ENV API_BASE_URL=${API_BASE_URL}
+ENV BACKEND_URL=${BACKEND_URL}
 
 RUN npm run build
 
@@ -45,5 +47,6 @@ ENV HOSTNAME="0.0.0.0"
 # Runtime env vars — override these when running the container
 # e.g.  docker run -e API_BASE_URL=https://api.example.com ...
 ENV API_BASE_URL=http://localhost:7254
+ENV BACKEND_URL=http://localhost:7254
 
 CMD ["node", "server.js"]

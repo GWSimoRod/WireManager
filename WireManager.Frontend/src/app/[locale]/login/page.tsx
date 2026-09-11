@@ -41,36 +41,13 @@ function LoginForm() {
     }
   }, [errorParam, tAuth]);
 
-  async function handleSSOLogin() {
+  function handleSSOLogin() {
     setIsSSOSubmitting(true);
-    try {
-      const res = await fetch("/api/auth/sso/login", {
-        headers: { Accept: "application/json" },
-      });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        let message = tAuth("ssoNotEnabled");
-        try {
-          const json = JSON.parse(errorText);
-          if (json.message) message = json.message;
-        } catch {
-          if (errorText) message = errorText;
-        }
-        toast.error(message);
-        setIsSSOSubmitting(false);
-        return;
-      }
-
-      const data = await res.json().catch(() => null);
-      if (data?.url) {
-        window.location.href = data.url;
-      } else {
-        window.location.href = "/api/auth/sso/login";
-      }
-    } catch {
-      window.location.href = "/api/auth/sso/login";
-    }
+    const backendUrl = (process.env.BACKEND_URL || "").replace(/\/+$/, "");
+    const targetUrl = backendUrl
+      ? `${backendUrl}/api/Auth/sso/login`
+      : "/api/Auth/sso/login";
+    window.location.href = targetUrl;
   }
 
   useEffect(() => {
