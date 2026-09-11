@@ -51,6 +51,11 @@ async function request<T>(
 
   // Handle 401 → redirect to login
   if (res.status === 401) {
+    let body = "no body";
+    try { body = await res.text(); } catch {}
+    console.error(`[API DEBUG] request<T> to ${url} returned 401! Body: ${body}`);
+    console.error("[API DEBUG] Triggering logout and redirecting to /login");
+    
     if (typeof window !== "undefined") {
       fetch("/api/auth/logout", { method: "POST" }).finally(() => {
         window.location.href = "/login";
@@ -64,8 +69,9 @@ async function request<T>(
     try {
       const text = await res.text();
       if (text) message = text;
+      console.error(`[API DEBUG] request<T> to ${url} failed with ${res.status}: ${text}`);
     } catch {
-      // ignore parse errors
+      console.error(`[API DEBUG] request<T> to ${url} failed with ${res.status} (unparseable body)`);
     }
     throw new ApiClientError(message, res.status);
   }
@@ -163,6 +169,11 @@ export async function getPeers(start?: number, end?: number, searchTerm?: string
   });
 
   if (res.status === 401) {
+    let body = "no body";
+    try { body = await res.text(); } catch {}
+    console.error(`[API DEBUG] getAllUsers returned 401! Body: ${body}`);
+    console.error("[API DEBUG] Triggering logout and redirecting to /login");
+
     if (typeof window !== "undefined") {
       fetch("/api/auth/logout", { method: "POST" }).finally(() => {
         window.location.href = "/login";
@@ -176,8 +187,9 @@ export async function getPeers(start?: number, end?: number, searchTerm?: string
     try {
       const text = await res.text();
       if (text) message = text;
+      console.error(`[API DEBUG] getAllUsers failed with ${res.status}: ${text}`);
     } catch {
-      // ignore
+      console.error(`[API DEBUG] getAllUsers failed with ${res.status} (unparseable body)`);
     }
     throw new ApiClientError(message, res.status);
   }
