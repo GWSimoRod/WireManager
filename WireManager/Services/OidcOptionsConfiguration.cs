@@ -95,21 +95,36 @@ namespace WireManager.Core.Services
                 return Task.CompletedTask;
             };
 
-            options.Events.OnMessageReceived = context =>
+            options.Events.OnMessageReceived = async context =>
             {
-                Console.WriteLine(
-                    $"[OIDC] Callback State presente: {!string.IsNullOrEmpty(context.ProtocolMessage.State)}"
-                );
-
-                Console.WriteLine(
-                    $"[OIDC] Callback Code presente: {!string.IsNullOrEmpty(context.ProtocolMessage.Code)}"
-                );
-
                 Console.WriteLine(
                     $"[OIDC] Callback Request method: {context.HttpContext.Request.Method}"
                 );
 
-                return Task.CompletedTask;
+                Console.WriteLine(
+                    $"[OIDC] Content-Type: {context.HttpContext.Request.ContentType}"
+                );
+
+                Console.WriteLine(
+                    $"[OIDC] Protocol State presente: {!string.IsNullOrEmpty(context.ProtocolMessage.State)}"
+                );
+
+                Console.WriteLine(
+                    $"[OIDC] Protocol Code presente: {!string.IsNullOrEmpty(context.ProtocolMessage.Code)}"
+                );
+
+                if (context.HttpContext.Request.HasFormContentType)
+                {
+                    var form = await context.HttpContext.Request.ReadFormAsync();
+
+                    Console.WriteLine(
+                        $"[OIDC] Form State presente: {form.ContainsKey("state")}"
+                    );
+
+                    Console.WriteLine(
+                        $"[OIDC] Form Code presente: {form.ContainsKey("code")}"
+                    );
+                }
             };
         }
     }
