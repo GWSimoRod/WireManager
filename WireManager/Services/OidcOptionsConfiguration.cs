@@ -44,7 +44,7 @@ namespace WireManager.Core.Services
             options.ClientSecret = settings.OidcClientSecret;
 
             options.ResponseType = "code";
-            options.ResponseMode = "form_post";
+            //options.ResponseMode = "form_post";
             options.UsePkce = true;
 
             options.SaveTokens = true;
@@ -80,21 +80,33 @@ namespace WireManager.Core.Services
                         $"{backendUrl.TrimEnd('/')}{context.Options.CallbackPath}";
                 }
 
+                Console.WriteLine(
+                    $"[OIDC] Authorization ResponseMode: {context.ProtocolMessage.ResponseMode}"
+                );
+
+                Console.WriteLine(
+                    $"[OIDC] Authorization ResponseType: {context.ProtocolMessage.ResponseType}"
+                );
+
+                Console.WriteLine(
+                    $"[OIDC] Authorization RedirectUri: {context.ProtocolMessage.RedirectUri}"
+                );
+
                 return Task.CompletedTask;
             };
 
             options.Events.OnMessageReceived = context =>
             {
                 Console.WriteLine(
-                    $"[OIDC] State: {context.ProtocolMessage.State}"
+                    $"[OIDC] Callback State presente: {!string.IsNullOrEmpty(context.ProtocolMessage.State)}"
                 );
 
                 Console.WriteLine(
-                    $"[OIDC] Code presente: {!string.IsNullOrEmpty(context.ProtocolMessage.Code)}"
+                    $"[OIDC] Callback Code presente: {!string.IsNullOrEmpty(context.ProtocolMessage.Code)}"
                 );
 
                 Console.WriteLine(
-                    $"[OIDC] Request method: {context.HttpContext.Request.Method}"
+                    $"[OIDC] Callback Request method: {context.HttpContext.Request.Method}"
                 );
 
                 return Task.CompletedTask;
