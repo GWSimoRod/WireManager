@@ -47,7 +47,7 @@ namespace WireManager.Core.Services
             //options.ResponseMode = "form_post";
             options.UsePkce = true;
 
-            options.SaveTokens = true;
+            options.SaveTokens = false;
 
             options.MapInboundClaims = false;
 

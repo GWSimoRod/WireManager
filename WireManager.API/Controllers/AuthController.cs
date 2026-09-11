@@ -97,7 +97,7 @@ namespace WireManager.API.Controllers
             catch (Exception ex)
             {
                 Console.WriteLine("[Auth]: Eliminazione dell'account fallito: " + ex.Message);
-                return Unauthorized(ex.Message);
+                return BadRequest(ex.Message);
             }
         }
 
@@ -119,7 +119,7 @@ namespace WireManager.API.Controllers
             catch (Exception ex)
             {
                 Console.WriteLine("[Auth]: Cambio role dell'account fallito: " + ex.Message);
-                return Unauthorized(ex.Message);
+                return BadRequest(ex.Message);
             }
         }
 
