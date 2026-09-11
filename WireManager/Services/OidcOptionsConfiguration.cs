@@ -97,32 +97,41 @@ namespace WireManager.Core.Services
 
             options.Events.OnMessageReceived = async context =>
             {
+                var request = context.HttpContext.Request;
+
                 Console.WriteLine(
-                    $"[OIDC] Callback Request method: {context.HttpContext.Request.Method}"
+                    $"[OIDC] Method: {request.Method}"
                 );
 
                 Console.WriteLine(
-                    $"[OIDC] Content-Type: {context.HttpContext.Request.ContentType}"
+                    $"[OIDC] Content-Type: {request.ContentType}"
                 );
 
                 Console.WriteLine(
-                    $"[OIDC] Protocol State presente: {!string.IsNullOrEmpty(context.ProtocolMessage.State)}"
+                    $"[OIDC] Protocol State: {!string.IsNullOrEmpty(context.ProtocolMessage.State)}"
                 );
 
                 Console.WriteLine(
-                    $"[OIDC] Protocol Code presente: {!string.IsNullOrEmpty(context.ProtocolMessage.Code)}"
+                    $"[OIDC] Protocol Code: {!string.IsNullOrEmpty(context.ProtocolMessage.Code)}"
                 );
 
-                if (context.HttpContext.Request.HasFormContentType)
+                if (request.HasFormContentType)
                 {
-                    var form = await context.HttpContext.Request.ReadFormAsync();
+                    var form = await request.ReadFormAsync();
+
+                    var formState = form["state"].FirstOrDefault();
+                    var formCode = form["code"].FirstOrDefault();
 
                     Console.WriteLine(
-                        $"[OIDC] Form State presente: {form.ContainsKey("state")}"
+                        $"[OIDC] Form State: {!string.IsNullOrEmpty(formState)}"
                     );
 
                     Console.WriteLine(
-                        $"[OIDC] Form Code presente: {form.ContainsKey("code")}"
+                        $"[OIDC] Form State Length: {formState?.Length ?? 0}"
+                    );
+
+                    Console.WriteLine(
+                        $"[OIDC] Form Code: {!string.IsNullOrEmpty(formCode)}"
                     );
                 }
             };
