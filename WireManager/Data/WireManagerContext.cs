@@ -16,6 +16,8 @@ namespace WireManager.Core.Data
         public DbSet<SystemConfig> SystemConfigs { get; set; }
         public DbSet<UsageHistory> UsageHistories { get; set; }
         public DbSet<Audit> Audits { get; set; }
+        public DbSet<AuthenticationSSO> AuthenticationSSOs { get; set; }
+        public DbSet<UserIdentity> UserIdentities { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -104,6 +106,11 @@ namespace WireManager.Core.Data
 
             modelBuilder.Entity<Audit>()
                 .HasKey(a => a.Id);
+
+            modelBuilder.Entity<UserIdentity>()
+                .HasIndex(x => new { x.Issuer, x.Subject })
+                .IsUnique();
+                
 
         }
 

@@ -169,8 +169,25 @@ export interface AuditLog {
   details: string | null;
 }
 
+// ─── SSO ────────────────────────────────────────────────────────────
+export interface SSOConfiguration {
+  id?: number;
+  oidcEnabled: boolean;
+  oidcAuthority?: string | null;
+  oidcClientId?: string | null;
+  oidcClientSecret?: string | null;
+}
+
+export interface UpdateSSORequest {
+  OidcEnabled: boolean;
+  OidcAuthority: string | null;
+  OidcClientId: string | null;
+  OidcClientSecret: string | null;
+}
+
 // ─── API Response Helpers ────────────────────────────────────────────
 export interface ApiError {
   message: string;
   status: number;
 }
+

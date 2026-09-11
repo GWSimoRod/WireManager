@@ -21,8 +21,12 @@ export async function GET() {
     );
 
     return NextResponse.json({
-      username: payload.unique_name || payload.sub || '',
-      role: payload.role || 'Operator',
+      username: payload.unique_name || payload.name || payload.sub || '',
+      role:
+        payload.role ||
+        payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] ||
+        payload.Role ||
+        'Operator',
     });
   } catch {
     return NextResponse.json({ error: 'Token non valido' }, { status: 401 });

@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -5,6 +7,7 @@ using WireManager.API.Attributes;
 using WireManager.Core.Domain;
 using WireManager.Core.DTO;
 using WireManager.Core.Interfaces;
+using WireManager.Core.Models;
 
 namespace WireManager.API.Controllers
 {
@@ -103,7 +106,7 @@ namespace WireManager.API.Controllers
         public async Task<IActionResult> UpdateRoleAccount(string uuid, string role)
         {
             if (!Guid.TryParse(uuid, out _)) return BadRequest("Invalid UUID format.");
-            if (role != AppRoles.Admin && role != AppRoles.Operator) return BadRequest("Invalid role.");
+            if (role != AppRoles.Admin && role != AppRoles.Operator && role != AppRoles.Disabled) return BadRequest("Invalid role.");
 
             try
             {
@@ -116,6 +119,163 @@ namespace WireManager.API.Controllers
             catch (Exception ex)
             {
                 Console.WriteLine("[Auth]: Cambio role dell'account fallito: " + ex.Message);
+                return Unauthorized(ex.Message);
+            }
+        }
+
+        [HttpGet("sso")]
+        [Authorize(Roles = AppRoles.Admin)]
+        public async Task<IActionResult> GetSSOConfiguration()
+        {
+            try
+            {
+                var ssoConfig = await _authServices.GetSSOConfiguration();
+                if (ssoConfig == null)
+                {
+                    return NotFound("SSO configuration not found.");
+                }
+                return Ok(ssoConfig);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[Auth]: Recupero configurazione SSO fallito: " + ex.Message);
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        [HttpPut("sso")]
+        [Authorize(Roles = AppRoles.Admin)]
+        public async Task<IActionResult> UpdateSSOConfiguration([FromBody] AuthenticationSSO ssoConfig)
+        {
+            try
+            {
+                await _authServices.UpdateSSOConfiguration(ssoConfig);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[Auth]: Aggiornamento configurazione SSO fallito: " + ex.Message);
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        [HttpGet("sso/status")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetSSOStatus()
+        {
+            try
+            {
+                var settings = await _authServices.GetSSOConfiguration();
+                return Ok(new { enabled = settings?.OidcEnabled ?? false });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[Auth]: Verifica stato SSO fallita: " + ex.Message);
+                return Ok(new { enabled = false });
+            }
+        }
+
+        [HttpGet("sso/login")]
+        [AllowAnonymous]
+        public async Task<IActionResult> SSOLogin()
+        {
+            try
+            {
+                // controllo se l'SSO è abilitato
+                var settings = await _authServices.GetSSOConfiguration();
+
+                if(settings == null || !settings.OidcEnabled)
+                {
+                    return BadRequest("SSO is not enabled.");
+                }
+
+                return Challenge(
+                    new AuthenticationProperties
+                    {
+                        RedirectUri = "/api/auth/sso/callback"
+                    },
+                    OpenIdConnectDefaults.AuthenticationScheme
+                );
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[Auth]: Autenticazione SSO fallita, ex: " + ex);
+                return Unauthorized(ex.Message);
+            }
+        }
+
+        [HttpGet("sso/callback")]
+        [Authorize(AuthenticationSchemes = "OidcCookie")]
+        public async Task<IActionResult> SSOCallback()
+        {
+            try
+            {
+                var result = await HttpContext.AuthenticateAsync("OidcCookie");
+
+                if (!result.Succeeded || result.Principal == null)
+                {
+                    return Unauthorized("SSO authentication failed.");
+                }
+
+                var issuer = result.Properties?.Items.TryGetValue(
+                    "oidc_issuer",
+                    out var value
+                ) == true
+                    ? value
+                    : null;
+
+                if (string.IsNullOrWhiteSpace(issuer))
+                {
+                    return Unauthorized("Invalid SSO identity: missing issuer.");
+                }
+
+                var identity = result.Principal.Identity as ClaimsIdentity;
+
+                if (identity == null)
+                {
+                    return Unauthorized("Invalid SSO identity.");
+                }
+
+                identity.AddClaim(new Claim("iss", issuer));
+
+                var authSSOResponse = await _authServices.LoginSSO(
+                    result.Principal
+                );
+
+                return Redirect("http://localhost:3000/sso-login?token=" + authSSOResponse.Token);
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[Auth]: Callback SSO fallita, ex: " + ex);
+                return Unauthorized(ex.Message);
+            }
+        }
+
+        [HttpGet("sso/exchange")]
+        [Authorize]
+        public async Task<IActionResult> ExchangeJWT()
+        {
+            try
+            {
+
+                var role = User.FindFirst(ClaimTypes.Role)?.Value;
+
+                if (role != "SSO_Exchange")
+                    return Unauthorized();
+
+                var userUUID = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (userUUID == null)
+                    return Unauthorized();
+
+                var authResponse = await _authServices.ExchangeJWTToken(userUUID);
+                return Ok(authResponse);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[Auth]: Exchange one-time code fallito, ex: " + ex);
                 return Unauthorized(ex.Message);
             }
         }

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using WireManager.Core.Data;
 
@@ -10,9 +11,11 @@ using WireManager.Core.Data;
 namespace WireManager.Core.Migrations
 {
     [DbContext(typeof(WireManagerContext))]
-    partial class WireManagerContextModelSnapshot : ModelSnapshot
+    [Migration("20260910195133_addSSO")]
+    partial class addSSO
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -288,36 +291,6 @@ namespace WireManager.Core.Migrations
                     b.ToTable("UsageHistories", (string)null);
                 });
 
-            modelBuilder.Entity("WireManager.Core.Models.UserIdentity", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    b.Property<string>("Issuer")
-                        .IsRequired()
-                        .HasColumnType("varchar(255)");
-
-                    b.Property<string>("Provider")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("Subject")
-                        .IsRequired()
-                        .HasColumnType("varchar(255)");
-
-                    b.Property<string>("UserUUID")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Issuer", "Subject")
-                        .IsUnique();
-
-                    b.ToTable("UserIdentities");
-                });
-
             modelBuilder.Entity("WireManager.Core.Models.Users", b =>
                 {
                     b.Property<int>("Id")
@@ -325,6 +298,7 @@ namespace WireManager.Core.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Password")
+                        .IsRequired()
                         .HasColumnType("longtext");
 
                     b.Property<string>("Role")

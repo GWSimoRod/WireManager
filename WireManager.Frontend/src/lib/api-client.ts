@@ -18,6 +18,8 @@ import type {
   CreateUserRequest,
   UserInfo,
   AuditLog,
+  SSOConfiguration,
+  UpdateSSORequest,
 } from "./types";
 
 export interface PaginatedResult<T> {
@@ -89,6 +91,25 @@ export async function logout(): Promise<void> {
 
 export async function checkAuth(): Promise<{ authenticated: boolean }> {
   return request<{ authenticated: boolean }>("/api/auth/check");
+}
+
+export async function exchangeSSOToken(temporaryToken: string): Promise<LoginResponse & { role?: string }> {
+  const res = await fetch("/api/auth/sso/exchange", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${temporaryToken}`,
+    },
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    const message = errorData.message || `Errore ${res.status}`;
+    const error = new ApiClientError(message, res.status);
+    (error as any).error = errorData.error;
+    throw error;
+  }
+
+  return res.json();
 }
 
 // ─── Servers ─────────────────────────────────────────────────────────
@@ -455,4 +476,60 @@ export async function getAuditLogs(
   };
 }
 
+// ─── SSO ─────────────────────────────────────────────────────────────
+export async function getSSOStatus(): Promise<{ enabled: boolean }> {
+  try {
+    const res = await fetch("/api/auth/sso/status", { cache: "no-store" });
+    if (!res.ok) return { enabled: false };
+    return res.json();
+  } catch {
+    return { enabled: false };
+  }
+}
+
+export async function getSSOConfiguration(): Promise<SSOConfiguration | null> {
+  const res = await fetch("/api/auth/sso", {
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (res.status === 401) {
+    if (typeof window !== "undefined") {
+      fetch("/api/auth/logout", { method: "POST" }).finally(() => {
+        window.location.href = "/login";
+      });
+    }
+    throw new ApiClientError("Non autenticato", 401);
+  }
+
+  // 404 indicates no SSO configuration exists yet
+  if (res.status === 404) {
+    return null;
+  }
+
+  if (!res.ok) {
+    let message = `Errore ${res.status}`;
+    try {
+      const text = await res.text();
+      if (text) message = text;
+    } catch {
+      // ignore
+    }
+    throw new ApiClientError(message, res.status);
+  }
+
+  const text = await res.text();
+  if (!text) return null;
+  return JSON.parse(text) as SSOConfiguration;
+}
+
+export async function updateSSOConfiguration(data: UpdateSSORequest): Promise<void> {
+  return request<void>("/api/auth/sso", {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
 export { ApiClientError };
+

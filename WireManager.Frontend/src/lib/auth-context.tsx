@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 
-export type UserRole = 'Admin' | 'Operator'
+export type UserRole = 'Admin' | 'Operator' | 'Disabled'
 
 interface AuthContextValue {
   isAuthenticated: boolean

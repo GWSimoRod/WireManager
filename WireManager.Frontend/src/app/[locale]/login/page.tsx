@@ -1,24 +1,77 @@
 "use client";
 
-import { useState, useEffect, type FormEvent } from "react";
+import { useState, useEffect, Suspense, type FormEvent } from "react";
+import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/routing";
 import { useAuth } from "@/lib/auth-context";
-import { getSetupStatus } from "@/lib/api-client";
-import { Shield, User, Lock, Loader2 } from "lucide-react";
+import { Shield, User, Lock, Loader2, KeyRound, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { getSSOStatus } from "@/lib/api-client";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const errorParam = searchParams.get("error");
   const { isAuthenticated, isLoading, login, userRole } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSSOSubmitting, setIsSSOSubmitting] = useState(false);
+  const [isSSOEnabled, setIsSSOEnabled] = useState(false);
   const tAuth = useTranslations("Auth");
 
-  // Setup check is now handled globally in AuthProvider
+  useEffect(() => {
+    let isMounted = true;
+    getSSOStatus().then((res) => {
+      if (isMounted) setIsSSOEnabled(Boolean(res.enabled));
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (errorParam === "account_disabled") {
+      toast.error(tAuth("accountDisabledDesc"), { duration: 7000 });
+    } else if (errorParam === "sso_failed") {
+      toast.error(tAuth("ssoLoginError"));
+    }
+  }, [errorParam, tAuth]);
+
+  async function handleSSOLogin() {
+    setIsSSOSubmitting(true);
+    try {
+      const res = await fetch("/api/auth/sso/login", {
+        headers: { Accept: "application/json" },
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        let message = tAuth("ssoNotEnabled");
+        try {
+          const json = JSON.parse(errorText);
+          if (json.message) message = json.message;
+        } catch {
+          if (errorText) message = errorText;
+        }
+        toast.error(message);
+        setIsSSOSubmitting(false);
+        return;
+      }
+
+      const data = await res.json().catch(() => null);
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        window.location.href = "/api/auth/sso/login";
+      }
+    } catch {
+      window.location.href = "/api/auth/sso/login";
+    }
+  }
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
@@ -40,7 +93,7 @@ export default function LoginPage() {
     setIsSubmitting(true);
     try {
       await login(username, password);
-      // Let the useEffect handle the redirection based on role
+      // Redirection handled by role check useEffect
     } catch (err) {
       const message =
         err instanceof Error ? err.message : tAuth("loginError");
@@ -83,6 +136,33 @@ export default function LoginPage() {
             </p>
           </div>
 
+          {/* Account Disabled Banner */}
+          {errorParam === "account_disabled" && (
+            <div className="mb-6 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-amber-200">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" />
+              <div>
+                <p className="font-semibold text-sm text-amber-300">
+                  {tAuth("accountDisabledTitle")}
+                </p>
+                <p className="text-xs text-amber-300/80 mt-1 leading-relaxed">
+                  {tAuth("accountDisabledDesc")}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* General SSO Error Banner */}
+          {errorParam === "sso_failed" && (
+            <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-red-200">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-400" />
+              <div>
+                <p className="font-semibold text-sm text-red-300">
+                  {tAuth("ssoLoginError")}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="relative">
@@ -95,7 +175,7 @@ export default function LoginPage() {
                 onChange={(e) => setUsername(e.target.value)}
                 className="pl-10 bg-zinc-800/50 border-zinc-700 placeholder:text-zinc-500 focus:border-blue-500 focus:ring-blue-500/20"
                 autoComplete="username"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isSSOSubmitting}
               />
             </div>
 
@@ -109,15 +189,15 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="pl-10 bg-zinc-800/50 border-zinc-700 placeholder:text-zinc-500 focus:border-blue-500 focus:ring-blue-500/20"
                 autoComplete="current-password"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isSSOSubmitting}
               />
             </div>
 
             <Button
               id="login-submit"
               type="submit"
-              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-500 hover:to-blue-600 shadow-lg shadow-blue-600/20 transition-all duration-200"
-              disabled={isSubmitting}
+              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-500 hover:to-blue-600 shadow-lg shadow-blue-600/20 transition-all duration-200 cursor-pointer"
+              disabled={isSubmitting || isSSOSubmitting}
             >
               {isSubmitting ? (
                 <>
@@ -128,9 +208,57 @@ export default function LoginPage() {
                 tAuth("login")
               )}
             </Button>
+
+            {isSSOEnabled && (
+              <>
+                <div className="relative my-4 flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-zinc-800" />
+                  </div>
+                  <span className="relative bg-zinc-900/90 px-3 text-xs uppercase text-zinc-500 font-medium">
+                    {tAuth("or")}
+                  </span>
+                </div>
+
+                <Button
+                  id="sso-login-button"
+                  type="button"
+                  variant="outline"
+                  onClick={handleSSOLogin}
+                  disabled={isSubmitting || isSSOSubmitting}
+                  className="w-full border-zinc-700/80 bg-zinc-800/40 text-zinc-200 hover:bg-zinc-800 hover:text-white transition-all duration-200 cursor-pointer shadow-sm"
+                >
+                  {isSSOSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {tAuth("redirectingSSO")}
+                    </>
+                  ) : (
+                    <>
+                      <KeyRound className="mr-2 h-4 w-4 text-blue-400" />
+                      {tAuth("loginWithSSO")}
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
           </form>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-zinc-950">
+          <Loader2 className="h-8 w-8 animate-spin text-zinc-500" />
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }

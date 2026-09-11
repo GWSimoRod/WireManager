@@ -16,6 +16,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Trash2,
+  UserX,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +32,16 @@ import { useTranslations } from "next-intl";
 const roleBadgeColors: Record<string, string> = {
   Admin: "bg-red-500/15 text-red-400 border-red-500/20",
   Operator: "bg-amber-500/15 text-amber-400 border-amber-500/20",
+  Disabled: "bg-zinc-500/15 text-zinc-400 border-zinc-500/20",
 };
+
+function getRoleBadgeClass(role?: string): string {
+  if (!role) return "bg-zinc-800 text-zinc-400 border-zinc-700";
+  const normalized = Object.keys(roleBadgeColors).find(
+    (k) => k.toLowerCase() === role.toLowerCase()
+  );
+  return (normalized && roleBadgeColors[normalized]) || "bg-zinc-800 text-zinc-400 border-zinc-700";
+}
 
 export default function UsersPage() {
   const tUsers = useTranslations("Users");
@@ -41,6 +51,7 @@ export default function UsersPage() {
   const ROLES = [
     { value: "Admin", label: tUsers("admin"), description: tUsers("adminDesc") },
     { value: "Operator", label: tUsers("operator"), description: tUsers("operatorDesc") },
+    { value: "Disabled", label: tUsers("disabled"), description: tUsers("disabledDesc") },
   ] as const;
   const { userRole, username: currentUser } = useAuth();
 
@@ -324,7 +335,7 @@ export default function UsersPage() {
                           <span>{ROLES.find((r) => r.value === role)?.label ?? tUsers("selectRole")}</span>
                           <Badge
                             variant="outline"
-                            className={`text-[10px] px-1.5 py-0 ${roleBadgeColors[role] || ""}`}
+                            className={`text-[10px] px-1.5 py-0 ${getRoleBadgeClass(role)}`}
                           >
                             {role}
                           </Badge>
@@ -355,7 +366,7 @@ export default function UsersPage() {
                                   <span className="font-medium">{r.label}</span>
                                   <Badge
                                     variant="outline"
-                                    className={`text-[10px] px-1.5 py-0 ${roleBadgeColors[r.value]}`}
+                                    className={`text-[10px] px-1.5 py-0 ${getRoleBadgeClass(r.value)}`}
                                   >
                                     {r.value}
                                   </Badge>
@@ -444,81 +455,99 @@ export default function UsersPage() {
                       </p>
                     </div>
                   ) : (
-                    users.map((user) => (
-                      <div
-                        key={user.username}
-                        className={`flex items-center justify-between rounded-xl border p-4 transition-colors ${
-                          user.username === currentUser
-                            ? "border-blue-500/30 bg-blue-500/5 shadow-sm shadow-blue-500/10"
-                            : "border-zinc-800/80 bg-zinc-900/50 hover:bg-zinc-800/50 hover:border-zinc-700"
-                        }`}
-                      >
-                        <div className="flex items-center gap-4">
-                          <div
-                            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border ${
-                              user.username === currentUser
-                                ? "border-blue-500/20 bg-blue-500/10 text-blue-400"
-                                : "border-zinc-700 bg-zinc-800 text-zinc-400"
-                            }`}
-                          >
-                            <User className="h-5 w-5" />
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <span className="font-medium text-zinc-100">
-                                {user.username}
-                              </span>
-                              {user.username === currentUser && (
-                                <Badge
-                                  variant="secondary"
-                                  className="bg-blue-500/10 text-[10px] text-blue-400 hover:bg-blue-500/10"
-                                >
-                                  {tUsers("you")}
-                                </Badge>
+                    users.map((user) => {
+                      const isCurrentUser = user.username === currentUser;
+                      const isDisabled = user.role?.toLowerCase() === "disabled";
+                      const currentRoleValue =
+                        ROLES.find((r) => r.value.toLowerCase() === user.role?.toLowerCase())?.value || user.role;
+
+                      return (
+                        <div
+                          key={user.username}
+                          className={`flex items-center justify-between rounded-xl border p-4 transition-colors ${
+                            isCurrentUser
+                              ? "border-blue-500/30 bg-blue-500/5 shadow-sm shadow-blue-500/10"
+                              : isDisabled
+                              ? "border-zinc-800/60 bg-zinc-950/40 hover:bg-zinc-900/60 hover:border-zinc-700"
+                              : "border-zinc-800/80 bg-zinc-900/50 hover:bg-zinc-800/50 hover:border-zinc-700"
+                          }`}
+                        >
+                          <div className="flex items-center gap-4 min-w-0 flex-1">
+                            <div
+                              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border ${
+                                isCurrentUser
+                                  ? "border-blue-500/20 bg-blue-500/10 text-blue-400"
+                                  : isDisabled
+                                  ? "border-zinc-800 bg-zinc-900 text-zinc-500"
+                                  : "border-zinc-700 bg-zinc-800 text-zinc-400"
+                              }`}
+                            >
+                              {isDisabled ? (
+                                <UserX className="h-5 w-5 text-zinc-500" />
+                              ) : (
+                                <User className="h-5 w-5" />
                               )}
                             </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 mb-0.5 min-w-0">
+                                <span
+                                  className={`font-medium truncate block ${isDisabled ? "text-zinc-400" : "text-zinc-100"}`}
+                                  title={user.username}
+                                >
+                                  {user.username}
+                                </span>
+                                {isCurrentUser && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="shrink-0 bg-blue-500/10 text-[10px] text-blue-400 hover:bg-blue-500/10"
+                                  >
+                                    {tUsers("you")}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3 shrink-0 ml-3">
+                            {!isCurrentUser ? (
+                              <div className="relative">
+                                <select
+                                  value={currentRoleValue}
+                                  onChange={(e) => handleRoleChange(user.uuid, user.username, e.target.value)}
+                                  className={`appearance-none cursor-pointer rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/50 pr-6 ${getRoleBadgeClass(user.role)}`}
+                                >
+                                  {ROLES.map((r) => (
+                                    <option key={r.value} value={r.value} className="bg-zinc-900 text-zinc-300">
+                                      {r.label}
+                                    </option>
+                                  ))}
+                                </select>
+                                <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 opacity-50" />
+                              </div>
+                            ) : (
+                              <Badge
+                                variant="outline"
+                                className={`${getRoleBadgeClass(user.role)}`}
+                              >
+                                {ROLES.find((r) => r.value.toLowerCase() === user.role?.toLowerCase())?.label || user.role}
+                              </Badge>
+                            )}
+                            
+                            {!isCurrentUser && (
+                              <button
+                                onClick={() => handleDelete(user.uuid, user.username)}
+                                className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-red-500/10 hover:text-red-400"
+                                title={tUsers("deleteAccount")}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            )}
+                            {isCurrentUser && (
+                              <div className="h-8 w-8" /> /* Empty space to maintain alignment */
+                            )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          {user.username !== currentUser ? (
-                            <div className="relative">
-                              <select
-                                value={user.role}
-                                onChange={(e) => handleRoleChange(user.uuid, user.username, e.target.value)}
-                                className={`appearance-none cursor-pointer rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/50 pr-6 ${roleBadgeColors[user.role] || "bg-zinc-800 text-zinc-400 border-zinc-700"}`}
-                              >
-                                {ROLES.map(r => (
-                                  <option key={r.value} value={r.value} className="bg-zinc-900 text-zinc-300">
-                                    {r.label}
-                                  </option>
-                                ))}
-                              </select>
-                              <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 opacity-50" />
-                            </div>
-                          ) : (
-                            <Badge
-                              variant="outline"
-                              className={`${roleBadgeColors[user.role] || "bg-zinc-800 text-zinc-400 border-zinc-700"}`}
-                            >
-                              {user.role}
-                            </Badge>
-                          )}
-                          
-                          {user.username !== currentUser && (
-                            <button
-                              onClick={() => handleDelete(user.uuid, user.username)}
-                              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-red-500/10 hover:text-red-400"
-                              title={tUsers("deleteAccount")}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          )}
-                          {user.username === currentUser && (
-                            <div className="h-8 w-8" /> /* Empty space to maintain alignment */
-                          )}
-                        </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
 

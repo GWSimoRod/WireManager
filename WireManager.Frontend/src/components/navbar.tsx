@@ -30,6 +30,8 @@ export function Navbar() {
     if (pathname.startsWith('/tags')) return t('tags')
     if (pathname.startsWith('/services')) return t('services')
     if (pathname.startsWith('/users')) return t('users')
+    if (pathname.startsWith('/audit')) return t('audit')
+    if (pathname.startsWith('/settings')) return t('settings')
     return t('dashboard')
   }
 
@@ -54,9 +56,14 @@ export function Navbar() {
 
       <div className="flex items-center gap-3">
         <LanguageSwitcher />
-        <Badge variant="secondary" className={`gap-1.5 ${userRole ? roleBadgeColors[userRole] || '' : ''}`}>
-          <User className="size-3" />
-          <span className="hidden sm:inline">{username ?? 'User'}</span>
+        <Badge
+          variant="secondary"
+          className={`gap-1.5 max-w-[140px] sm:max-w-[200px] md:max-w-[260px] min-w-0 ${userRole ? roleBadgeColors[userRole] || '' : ''}`}
+        >
+          <User className="size-3 shrink-0" />
+          <span className="truncate" title={username ?? 'User'}>
+            {username ?? 'User'}
+          </span>
         </Badge>
         <Button variant="ghost" size="icon-sm" onClick={() => logout()}>
           <LogOut className="size-4 text-zinc-400" />

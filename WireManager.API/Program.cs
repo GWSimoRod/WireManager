@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Cryptography;
@@ -104,7 +106,16 @@ builder.Services.AddAuthentication(options =>
             return Task.CompletedTask;
         }
     };
+})
+.AddCookie("OidcCookie")
+.AddOpenIdConnect(OpenIdConnectDefaults.AuthenticationScheme, options =>
+{
+    options.SignInScheme = "OidcCookie";
+    options.CallbackPath = "/signin-oidc";
 });
+
+// Configurazione delle opzioni OpenID Connect tramite il servizio personalizzato
+builder.Services.AddSingleton<IConfigureOptions<OpenIdConnectOptions>, OidcOptionsConfiguration>();
 
 // Registrazione dei processi in background
 builder.Services.AddHostedService<PeerExpirationWorker>();
