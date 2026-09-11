@@ -114,18 +114,20 @@ namespace WireManager.Core.Services
                 {
                     var form = await request.ReadFormAsync();
 
-                    foreach (var key in form.Keys)
+                    var formState = form["state"].FirstOrDefault();
+                    var formCode = form["code"].FirstOrDefault();
+
+                    Console.WriteLine($"[OIDC] Form State: {!string.IsNullOrEmpty(formState)}");
+                    Console.WriteLine($"[OIDC] Form State Length: {formState?.Length ?? 0}");
+                    Console.WriteLine($"[OIDC] Form Code: {!string.IsNullOrEmpty(formCode)}");
+
+                    if (!string.IsNullOrEmpty(formState) &&
+                        string.IsNullOrEmpty(context.ProtocolMessage.State))
                     {
-                        Console.WriteLine($"[OIDC] Form key: {key}");
+                        context.ProtocolMessage.State = formState;
+
+                        Console.WriteLine("[OIDC] State copiato manualmente nel ProtocolMessage");
                     }
-
-                    Console.WriteLine(
-                        $"[OIDC] Form State: {form.ContainsKey("state")}"
-                    );
-
-                    Console.WriteLine(
-                        $"[OIDC] Form State Length: {form["state"].FirstOrDefault()?.Length ?? 0}"
-                    );
                 }
             };
         }
