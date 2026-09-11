@@ -477,7 +477,7 @@ export async function getAuditLogs(
 }
 
 // ─── SSO ─────────────────────────────────────────────────────────────
-export async function getSSOStatus(): Promise<{ enabled: boolean }> {
+export async function getSSOStatus(): Promise<{ enabled: boolean; ssoUrl?: string }> {
   try {
     const res = await fetch("/api/auth/sso/status", { cache: "no-store" });
     if (!res.ok) return { enabled: false };

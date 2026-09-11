@@ -21,12 +21,18 @@ function LoginForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSSOSubmitting, setIsSSOSubmitting] = useState(false);
   const [isSSOEnabled, setIsSSOEnabled] = useState(false);
+  const [ssoLoginUrl, setSsoLoginUrl] = useState<string | null>(null);
   const tAuth = useTranslations("Auth");
 
   useEffect(() => {
     let isMounted = true;
     getSSOStatus().then((res) => {
-      if (isMounted) setIsSSOEnabled(Boolean(res.enabled));
+      if (isMounted) {
+        setIsSSOEnabled(Boolean(res.enabled));
+        if (res.ssoUrl) {
+          setSsoLoginUrl(res.ssoUrl);
+        }
+      }
     });
     return () => {
       isMounted = false;
@@ -43,10 +49,11 @@ function LoginForm() {
 
   function handleSSOLogin() {
     setIsSSOSubmitting(true);
-    const backendUrl = (process.env.BACKEND_URL || "").replace(/\/+$/, "");
-    const targetUrl = backendUrl
-      ? `${backendUrl}/api/Auth/sso/login`
-      : "/api/Auth/sso/login";
+    const targetUrl =
+      ssoLoginUrl ||
+      (process.env.BACKEND_URL
+        ? `${process.env.BACKEND_URL.replace(/\/+$/, "")}/api/Auth/sso/login`
+        : "/api/auth/sso/login");
     window.location.href = targetUrl;
   }
 
