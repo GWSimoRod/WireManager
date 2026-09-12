@@ -246,6 +246,10 @@ namespace WireManager.Core.Services
             }
 
             _context.Users.Remove(user);
+
+            // elimino anche le identità legate a questo utente se presenti
+
+            _context.UserIdentities.RemoveRange(_context.UserIdentities.Where(ui => ui.UserUUID == user.UUID));
             await _context.SaveChangesAsync();
 
             await _auditServices.AuditLog(
