@@ -5,10 +5,12 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Serialization;
 using WireManager.Core.Data;
+using WireManager.Core.Domain;
 using WireManager.Core.Interfaces;
 using WireManager.Core.Models;
 using WireManager.Core.Services;
@@ -120,7 +122,49 @@ builder.Services.AddAuthentication(options =>
             Console.WriteLine($"[JWT CHALLENGE] {context.Error} - {context.ErrorDescription}");
             Console.ResetColor();
             return Task.CompletedTask;
+        },
+        OnTokenValidated = async context =>
+        {
+            var userId = context.Principal?
+                .FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            var tokenRole = context.Principal?
+                .FindFirst(ClaimTypes.Role)?.Value;
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                context.Fail("Invalid user identity");
+                return;
+            }
+
+            // se il role è SSO_Exchange faccio passare
+            if(tokenRole == AppRoles.SSO_Exchange)
+            {
+                return;
+            }
+
+            var db = context.HttpContext.RequestServices
+                .GetRequiredService<WireManagerContext>();
+
+            var user = await db.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.UUID == userId);
+
+            // Account eliminato
+            if (user == null)
+            {
+                context.Fail("User no longer exists");
+                return;
+            }
+
+            // Ruolo cambiato
+            if (user.Role != tokenRole)
+            {
+                context.Fail("User role has changed");
+                return;
+            }
         }
+
     };
 })
 .AddCookie("OidcCookie")
