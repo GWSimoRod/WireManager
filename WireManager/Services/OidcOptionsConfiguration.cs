@@ -80,29 +80,8 @@ namespace WireManager.Core.Services
                         $"{backendUrl.TrimEnd('/')}{context.Options.CallbackPath}";
                 }
 
-                Console.WriteLine(
-                    $"[OIDC] Authorization ResponseMode: {context.ProtocolMessage.ResponseMode}"
-                );
-
-                Console.WriteLine(
-                    $"[OIDC] Authorization ResponseType: {context.ProtocolMessage.ResponseType}"
-                );
-
-                Console.WriteLine(
-                    $"[OIDC] Authorization RedirectUri: {context.ProtocolMessage.RedirectUri}"
-                );
-
                 return Task.CompletedTask;
-            };
-
-            options.Events.OnMessageReceived = context =>
-            {
-                Console.WriteLine(
-                    $"[OIDC] Callback received: {context.HttpContext.Request.Method} {context.HttpContext.Request.ContentType}"
-                );
-
-                return Task.CompletedTask;
-            };
+            }; 
         }
     }
 }

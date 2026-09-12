@@ -21,18 +21,14 @@ namespace WireManager.Core.Services
     {
         private readonly ILogger<AuthServices> _logger;
         private readonly WireManagerContext _context;
-        private readonly IConfiguration _configuration;
-        private readonly SymmetricSecurityKey _jwtKey;
         private readonly IAuditServices _auditServices;
-        private readonly IOptionsMonitorCache<OpenIdConnectOptions> _oidcOptionCache;
+        private readonly ITokenServices _tokenServices;
 
-        public AuthServices(WireManagerContext context, IConfiguration configuration, ILogger<AuthServices> logger, SymmetricSecurityKey jwtKey, IAuditServices auditServices, IOptionsMonitorCache<OpenIdConnectOptions> oidcOptionCache) {
+        public AuthServices(WireManagerContext context, ILogger<AuthServices> logger, IAuditServices auditServices, IOptionsMonitorCache<OpenIdConnectOptions> oidcOptionCache, ITokenServices tokenServices) {
             _logger = logger;
             _context = context;
-            _configuration = configuration;
-            _jwtKey = jwtKey;
             _auditServices = auditServices;
-            _oidcOptionCache = oidcOptionCache;
+            _tokenServices = tokenServices;
         }
 
         public async Task<AuthResponseDTO> LoginAsync(string username, string password) {
@@ -73,7 +69,31 @@ namespace WireManager.Core.Services
                 await _context.SaveChangesAsync();
             }
 
-            var tokenString = await GenerateJWTToken(user);
+            // controllo se il mfa è attivo
+
+            if (user.mfaEnabled)
+            {
+                // genero un token con role "mfa"
+
+                var tokenMFA = await _tokenServices.GenerateJWTToken(user, role: AppRoles.MFA);
+
+                await _auditServices.AuditLog(
+                    "Auth.LoginMFA",
+                    "User",
+                    user.UUID,
+                    true,
+                    null
+                );
+
+                return new AuthResponseDTO
+                {
+                    Token = tokenMFA,
+                    Date = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss")
+                };
+
+            }
+
+            var tokenString = await _tokenServices.GenerateJWTToken(user);
 
             // Log dell'evento di login riuscito
             await _auditServices.AuditLog(
@@ -318,231 +338,9 @@ namespace WireManager.Core.Services
                 null
             );
 
-
-
             return true;
 
         }
 
-        public async Task<AuthenticationSSO?> GetSSOConfiguration()
-        {
-            return await _context.AuthenticationSSOs
-                .FirstOrDefaultAsync();
-        }
-
-        public async Task UpdateSSOConfiguration(AuthenticationSSO ssoConfig)
-        {
-            var existingConfig = await _context.AuthenticationSSOs.FirstOrDefaultAsync();
-            if (existingConfig != null)
-            {
-                existingConfig.OidcEnabled = ssoConfig.OidcEnabled;
-                existingConfig.OidcAuthority = ssoConfig.OidcAuthority;
-                existingConfig.OidcClientId = ssoConfig.OidcClientId;
-                existingConfig.OidcClientSecret = ssoConfig.OidcClientSecret;
-            }
-            else
-            {
-                await _context.AuthenticationSSOs.AddAsync(ssoConfig);
-            }
-            await _context.SaveChangesAsync();
-
-            // Clear the OIDC options cache to ensure the new configuration is applied
-            _oidcOptionCache.TryRemove(OpenIdConnectDefaults.AuthenticationScheme);
-
-            await _auditServices.AuditLog(
-                "Auth.UpdateSSO",
-                "SSO",
-                null,
-                true,
-                null
-            );
-
-        }
-
-        public async Task<AuthResponseDTO> LoginSSO(ClaimsPrincipal user)
-        {
-            var issuer = user.FindFirst("iss")?.Value;
-            var subject = user.FindFirst("sub")?.Value;
-
-            if (string.IsNullOrWhiteSpace(issuer) ||
-                string.IsNullOrWhiteSpace(subject))
-            {
-                await _auditServices.AuditLog(
-                    "Auth.LoginSSO",
-                    "User",
-                    null,
-                    false,
-                    "Invalid SSO identity: missing issuer or subject"
-                );
-                throw new Exception("Invalid SSO identity.");
-            }
-
-            var existingUserIdentity = await _context.UserIdentities
-                .FirstOrDefaultAsync(ui => ui.Issuer == issuer && ui.Subject == subject);
-
-            // user does not exist, create a new one
-
-            if (existingUserIdentity == null)
-            {
-                var email = user.FindFirst("email")?.Value;
-                var name = user.FindFirst("name")?.Value;
-
-                if (string.IsNullOrWhiteSpace(email) &&
-                    string.IsNullOrWhiteSpace(name))
-                {
-                    await _auditServices.AuditLog(
-                        "Auth.RegisterSSO",
-                        "User",
-                        null,
-                        false,
-                        "SSO user has no email or name"
-                    );
-                    throw new Exception("SSO user has no email or name.");
-                }
-
-                // controllo che l'username non esista già, altrimenti aggiungo un numero progressivo allo username per renderlo unico
-
-                var baseUsername = email ?? name;
-
-                var existingUsernames = await _context.Users
-                    .Where(u => u.Username.StartsWith(baseUsername))
-                    .Select(u => u.Username)
-                    .ToListAsync();
-
-                if(existingUsernames.Contains(baseUsername))
-                {
-                    int suffix = 1;
-                    string newUsername;
-                    do
-                    {
-                        newUsername = $"{baseUsername}{suffix}";
-                        suffix++;
-                    } while (existingUsernames.Contains(newUsername));
-                    baseUsername = newUsername;
-                }
-
-                var newUser = new Users(
-                    baseUsername,
-                    null,
-                    AppRoles.Disabled
-
-                );
-
-                var identity = new UserIdentity
-                {
-                    UserUUID = newUser.UUID,
-                    Provider = "OIDC",
-                    Issuer = issuer,
-                    Subject = subject
-                };
-
-                _context.Users.Add(newUser);
-                _context.UserIdentities.Add(identity);
-
-                await _context.SaveChangesAsync();
-
-                await _auditServices.AuditLog(
-                    "Auth.RegisterSSO",
-                    "User",
-                    newUser.UUID,
-                    true,
-                    null
-                );
-
-                newUser.Role = AppRoles.SSO_Exchange;
-
-                return new AuthResponseDTO
-                {
-                    Token = await GenerateJWTToken(newUser, 1),
-                    Date = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss")
-                };
-
-            }
-
-            // user exists, log the login event
-            
-            var existingAppUser = await _context.Users.FirstOrDefaultAsync(u => u.UUID == existingUserIdentity.UserUUID);
-
-            if(existingAppUser == null)
-            {
-                await _auditServices.AuditLog(
-                    "Auth.LoginSSO",
-                    "User",
-                    existingUserIdentity.UserUUID,
-                    false,
-                    "User identity exists but no corresponding user found"
-                );
-                throw new Exception("User identity exists but no corresponding user found.");
-            }
-
-            await _auditServices.AuditLog(
-                "Auth.LoginSSO",
-                "User",
-                existingAppUser.UUID,
-                true,
-                null
-            );
-
-            existingAppUser.Role = AppRoles.SSO_Exchange;
-
-            return new AuthResponseDTO
-            {
-                Token = await GenerateJWTToken(existingAppUser, 1),
-                Date = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss")
-            };
-
-        }
-
-        public async Task<AuthResponseDTO> ExchangeJWTToken(string userUUID)
-        {
-            var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.UUID == userUUID);
-
-            if (user == null)
-                throw new Exception("User not found.");
-
-            return new AuthResponseDTO
-            {
-                Token = await GenerateJWTToken(user),
-                Date = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss")
-            };
-        }
-
-        private async Task<string> GenerateJWTToken(Users user, int duration = 120)
-        {
-            // genero un token di autenticazione
-
-            var tokenHandler = new JwtSecurityTokenHandler();
-
-
-            // Definiamo i dettagli (Claims) che viaggeranno criptati nel token
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(new[]
-                {
-                new Claim(ClaimTypes.NameIdentifier, user.UUID),
-                new Claim(ClaimTypes.Name, user.Username),
-                new Claim(ClaimTypes.Role, user.Role ?? "User") // Il ruolo serve al middleware [Authorize(Roles = "Admin")]
-            }),
-
-                // Impostiamo la durata della sessione 
-                Expires = DateTime.UtcNow.AddMinutes(duration),
-
-                Issuer = "WireManager",
-                Audience = "WireManagerClients",
-
-                // Firmiamo il token con la nostra chiave simmetrica usando l'algoritmo HMAC-SHA256
-                SigningCredentials = new SigningCredentials(
-                    _jwtKey,
-                    SecurityAlgorithms.HmacSha256Signature
-                )
-            };
-
-            // Creiamo l'oggetto token ed esportiamolo come stringa pronta per il client
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-            string tokenString = tokenHandler.WriteToken(token);
-
-            return tokenString;
-        }
     }
 }

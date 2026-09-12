@@ -17,10 +17,14 @@ namespace WireManager.API.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IAuthServices _authServices;
+        private readonly ISSOServices _ssoServices;
+        private readonly IMFAServices _mfaServices;
 
-        public AuthController(IAuthServices authServices)
+        public AuthController(IAuthServices authServices, ISSOServices sSOServices, IMFAServices mFAServices)
         {
             _authServices = authServices;
+            _ssoServices = sSOServices;
+            _mfaServices = mFAServices;
         }
 
         [HttpPost("login")]
@@ -110,11 +114,6 @@ namespace WireManager.API.Controllers
 
             try
             {
-                foreach (var claim in User.Claims)
-                {
-                    Console.WriteLine($"{claim.Type} = {claim.Value}");
-                }
-
 
                 var userUuid = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (string.IsNullOrEmpty(userUuid)) return Unauthorized();
@@ -135,7 +134,7 @@ namespace WireManager.API.Controllers
         {
             try
             {
-                var ssoConfig = await _authServices.GetSSOConfiguration();
+                var ssoConfig = await _ssoServices.GetSSOConfiguration();
                 if (ssoConfig == null)
                 {
                     return NotFound("SSO configuration not found.");
@@ -155,7 +154,7 @@ namespace WireManager.API.Controllers
         {
             try
             {
-                await _authServices.UpdateSSOConfiguration(ssoConfig);
+                await _ssoServices.UpdateSSOConfiguration(ssoConfig);
                 return Ok();
             }
             catch (Exception ex)
@@ -171,7 +170,7 @@ namespace WireManager.API.Controllers
         {
             try
             {
-                var settings = await _authServices.GetSSOConfiguration();
+                var settings = await _ssoServices.GetSSOConfiguration();
                 return Ok(new { enabled = settings?.OidcEnabled ?? false });
             }
             catch (Exception ex)
@@ -188,7 +187,7 @@ namespace WireManager.API.Controllers
             try
             {
                 // controllo se l'SSO è abilitato
-                var settings = await _authServices.GetSSOConfiguration();
+                var settings = await _ssoServices.GetSSOConfiguration();
 
                 if(settings == null || !settings.OidcEnabled)
                 {
@@ -245,7 +244,7 @@ namespace WireManager.API.Controllers
 
                 identity.AddClaim(new Claim("iss", issuer));
 
-                var authSSOResponse = await _authServices.LoginSSO(
+                var authSSOResponse = await _ssoServices.LoginSSO(
                     result.Principal
                 );
 
@@ -264,23 +263,18 @@ namespace WireManager.API.Controllers
         }
 
         [HttpGet("sso/exchange")]
-        [Authorize]
+        [Authorize(Roles = AppRoles.SSO_Exchange)]
         public async Task<IActionResult> ExchangeJWT()
         {
             try
             {
-
-                var role = User.FindFirst(ClaimTypes.Role)?.Value;
-
-                if (role != "SSO_Exchange")
-                    return Unauthorized();
 
                 var userUUID = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
                 if (userUUID == null)
                     return Unauthorized();
 
-                var authResponse = await _authServices.ExchangeJWTToken(userUUID);
+                var authResponse = await _ssoServices.ExchangeJWTToken(userUUID);
                 return Ok(authResponse);
             }
             catch (Exception ex)
@@ -289,5 +283,72 @@ namespace WireManager.API.Controllers
                 return Unauthorized(ex.Message);
             }
         }
+
+        [HttpPost("mfa/enable")]
+        [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Operator}")]
+        public async Task<IActionResult> EnableMfa()
+        {
+            try
+            {
+                var responseMfa = await _mfaServices.AddNewMfa();
+                return Ok(responseMfa);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[Auth]: Abilitazione MFA fallita, ex: " + ex);
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPost("mfa/disable")]
+        [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Operator}")]
+        public async Task<IActionResult> DisableMfa()
+        {
+            try
+            {
+                await _mfaServices.DisableMfa();
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[Auth]: Disabilitazione MFA fallita, ex: " + ex);
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPost("mfa/verify")]
+        [Authorize(Roles = AppRoles.MFA)]
+        public async Task<IActionResult> VerifyMfa([FromBody] MfaVerifyDTO mfaVerify)
+        {
+            try
+            {
+                var token = await _mfaServices.VerifyMfa(mfaVerify.Code);
+
+                return Ok(token);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[Auth]: Verifica MFA fallita, ex: " + ex);
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpGet("mfa/enabled")]
+        [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Operator}")]
+        public async Task<IActionResult> EnabledMfa()
+        {
+            try
+            {
+                var isEnabled = await _mfaServices.IsMfaEnabled();
+
+                return Ok(isEnabled);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[Auth]: Recupero stato MFA fallito, ex: " + ex);
+                return BadRequest(ex.Message);
+            }
+        }
+
     }
 }

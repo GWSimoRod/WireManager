@@ -20,6 +20,11 @@ import type {
   AuditLog,
   SSOConfiguration,
   UpdateSSORequest,
+  MfaVerifyRequest,
+  MfaVerifyResponse,
+  MfaEnabledResponse,
+  MfaSetupResponse,
+  LoginResult,
 } from "./types";
 
 export interface PaginatedResult<T> {
@@ -541,6 +546,64 @@ export async function updateSSOConfiguration(data: UpdateSSORequest): Promise<vo
     method: "PUT",
     body: JSON.stringify(data),
   });
+}
+
+// ─── MFA ─────────────────────────────────────────────────────────────
+export async function getMfaStatus(): Promise<MfaEnabledResponse> {
+  try {
+    const res = await fetch("/api/auth/mfa/enabled", { cache: "no-store" });
+    if (!res.ok) return { isEnabled: false, isIdentity: false };
+    const data = await res.json();
+    if (typeof data === "boolean") {
+      return { isEnabled: data, isIdentity: false };
+    }
+    return {
+      isEnabled: Boolean(data?.isEnabled ?? data?.IsEnabled ?? false),
+      isIdentity: Boolean(data?.isIdentity ?? data?.IsIdentity ?? false),
+    };
+  } catch {
+    return { isEnabled: false, isIdentity: false };
+  }
+}
+
+export async function enableMfa(): Promise<MfaSetupResponse> {
+  const data = await request<any>("/api/auth/mfa/enable", {
+    method: "POST",
+  });
+  return {
+    secret: data?.secret ?? data?.Secret ?? "",
+    otpauthUri: data?.otpauthUri ?? data?.OtpauthUri ?? "",
+  };
+}
+
+export async function disableMfa(): Promise<void> {
+  return request<void>("/api/auth/mfa/disable", {
+    method: "POST",
+  });
+}
+
+export async function verifyMfa(code: string, token?: string): Promise<MfaVerifyResponse> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const res = await fetch("/api/auth/mfa/verify", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ code, token }),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    const message = errorData.message || `Errore ${res.status}`;
+    const error = new ApiClientError(message, res.status);
+    throw error;
+  }
+
+  return res.json();
 }
 
 export { ApiClientError };

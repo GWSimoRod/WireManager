@@ -9,6 +9,36 @@ export interface LoginResponse {
   date: string;
 }
 
+export interface LoginResult {
+  success: boolean;
+  mfaRequired?: boolean;
+  mfaToken?: string;
+  message?: string;
+}
+
+export interface MfaVerifyRequest {
+  code: string;
+  token?: string;
+}
+
+export interface MfaVerifyResponse {
+  success: boolean;
+  token?: string;
+  role?: string;
+  date?: string;
+  message?: string;
+}
+
+export interface MfaEnabledResponse {
+  isEnabled: boolean;
+  isIdentity: boolean;
+}
+
+export interface MfaSetupResponse {
+  secret: string;
+  otpauthUri: string;
+}
+
 // ─── Server ──────────────────────────────────────────────────────────
 export interface ConfServer {
   id: number;

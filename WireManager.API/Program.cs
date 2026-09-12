@@ -41,6 +41,9 @@ builder.Services.AddScoped<IFirewallServices, FirewallServices>();
 builder.Services.AddScoped<ISetupServices, SetupServices>();
 builder.Services.AddScoped<IWireguardOps, WireguardOps>();
 builder.Services.AddScoped<IAuditServices, AuditServices>();
+builder.Services.AddScoped<ITokenServices, TokenServices>();
+builder.Services.AddScoped<ISSOServices, SSOServices>();
+builder.Services.AddScoped<IMFAServices, MFAServices>();
 
 // Gestione della cartella base e della chiave segreta per il JWT
 var baseFolder = DiskOps._baseFolderPathServer;

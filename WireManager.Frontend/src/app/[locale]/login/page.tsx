@@ -72,7 +72,18 @@ function LoginForm() {
 
     setIsSubmitting(true);
     try {
-      await login(username, password);
+      const res = await login(username, password);
+      if (res?.mfaRequired) {
+        if (res.mfaToken) {
+          try {
+            sessionStorage.setItem("wm_mfa_token", res.mfaToken);
+          } catch {
+            // ignore
+          }
+        }
+        router.push("/mfa");
+        return;
+      }
       // Redirection handled by role check useEffect
     } catch (err) {
       const message =

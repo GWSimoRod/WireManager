@@ -1,4 +1,6 @@
-﻿namespace WireManager.Core.Models
+﻿using System.Text.Json.Serialization;
+
+namespace WireManager.Core.Models
 {
     public class Users
     {
@@ -8,6 +10,10 @@
         public string? Password { get; set; }
         public string Role { get; set; }
         public string UUID { get; set; } = Guid.NewGuid().ToString();
+        public bool mfaEnabled { get; set; } = false;
+
+        [JsonIgnore]
+        public string? mfaSecret { get; set; }
 
         public Users(int Id, string Username, string? Password, string Role) {
             this.Id = Id;

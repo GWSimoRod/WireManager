@@ -6,7 +6,8 @@
         public const string Operator = "Operator";
         public const string Disabled = "Disabled";
         public const string SSO_Exchange = "SSO_Exchange";
-        public static readonly IReadOnlyList<string> All = [Admin, Operator, Disabled, SSO_Exchange];
+        public const string MFA = "mfa";
+        public static readonly IReadOnlyList<string> All = [Admin, Operator, Disabled, SSO_Exchange, MFA];
 
         public static bool IsValid(string? role) =>
             !string.IsNullOrWhiteSpace(role) &&

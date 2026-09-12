@@ -5,12 +5,19 @@ import { useRouter } from 'next/navigation'
 
 export type UserRole = 'Admin' | 'Operator' | 'Disabled'
 
+export interface LoginAuthResult {
+  mfaRequired: boolean;
+  mfaToken?: string;
+}
+
 interface AuthContextValue {
   isAuthenticated: boolean
   isLoading: boolean
   username: string | null
   userRole: UserRole | null
-  login: (username: string, password: string) => Promise<void>
+  isIdentity: boolean
+  login: (username: string, password: string) => Promise<LoginAuthResult>
+  verifyMfa: (code: string, token?: string) => Promise<{ role?: string }>
   logout: () => Promise<void>
   checkSession: () => Promise<void>
 }
@@ -22,6 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const [username, setUsername] = useState<string | null>(null)
   const [userRole, setUserRole] = useState<UserRole | null>(null)
+  const [isIdentity, setIsIdentity] = useState(false)
   const router = useRouter()
 
   const fetchUserInfo = useCallback(async () => {
@@ -31,6 +39,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const data = await res.json()
         setUsername(data.username || null)
         setUserRole(data.role || null)
+
+        if (data.role === 'Admin' || data.role === 'Operator') {
+          try {
+            const mfaRes = await fetch('/api/auth/mfa/enabled', { cache: 'no-store' })
+            if (mfaRes.ok) {
+              const mfaData = await mfaRes.json()
+              setIsIdentity(Boolean(mfaData?.isIdentity ?? mfaData?.IsIdentity ?? false))
+            }
+          } catch {
+            // ignore
+          }
+        }
       }
     } catch {
       // ignore — user info is best-effort
@@ -52,7 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return
           }
         }
-      } catch (e) {
+      } catch {
         // Ignore network errors here and continue to auth check
       }
 
@@ -75,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [fetchUserInfo, router])
 
   const login = useCallback(
-    async (username: string, password: string) => {
+    async (username: string, password: string): Promise<LoginAuthResult> => {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -87,8 +107,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(data.message ?? 'Credenziali non valide')
       }
 
+      const data = await res.json()
+      if (data.mfaRequired) {
+        return { mfaRequired: true, mfaToken: data.mfaToken }
+      }
+
       setIsAuthenticated(true)
       await fetchUserInfo()
+      return { mfaRequired: false }
+    },
+    [fetchUserInfo]
+  )
+
+  const verifyMfa = useCallback(
+    async (code: string, token?: string): Promise<{ role?: string }> => {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+
+      const res = await fetch('/api/auth/mfa/verify', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ code, token }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.message ?? 'Codice di verifica non valido')
+      }
+
+      const data = await res.json()
+      setIsAuthenticated(true)
+      await fetchUserInfo()
+      return { role: data.role }
     },
     [fetchUserInfo]
   )
@@ -100,6 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsAuthenticated(false)
       setUsername(null)
       setUserRole(null)
+      setIsIdentity(false)
       router.push('/login')
     }
   }, [router])
@@ -109,7 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [checkSession])
 
   return (
-    <AuthContext value={{ isAuthenticated, isLoading, username, userRole, login, logout, checkSession }}>
+    <AuthContext value={{ isAuthenticated, isLoading, username, userRole, isIdentity, login, verifyMfa, logout, checkSession }}>
       {children}
     </AuthContext>
   )

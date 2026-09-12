@@ -54,7 +54,16 @@
     "accountDisabledDesc": "L'utente non è ancora stato abilitato. Se si tratta di un problema, contatta l'amministratore.",
     "ssoLoginError": "Autenticazione SSO fallita o sessione non valida.",
     "completingSSO": "Completamento accesso SSO in corso...",
-    "completingSSODesc": "Verifica e attivazione della sessione in corso..."
+    "completingSSODesc": "Verifica e attivazione della sessione in corso...",
+    "mfaTitle": "Autenticazione a Due Fattori",
+    "mfaSubtitle": "Inserisci il codice monouso generato dalla tua applicazione di autenticazione",
+    "mfaCode": "Codice di verifica",
+    "mfaCodePlaceholder": "000000",
+    "mfaCodeRequired": "Inserisci il codice di verifica",
+    "verifyCode": "Verifica codice",
+    "verifying": "Verifica in corso...",
+    "backToLogin": "Torna al login",
+    "invalidMfaCode": "Codice di verifica non valido o scaduto"
   },
   "Setup": {
     "title": "Setup Iniziale",
@@ -384,6 +393,20 @@
     "validationRequired": "Tutti i campi OIDC sono obbligatori quando l'SSO è abilitato",
     "showSecret": "Mostra segreto",
     "hideSecret": "Nascondi segreto",
-    "disabledNotice": "L'SSO è attualmente disattivato. Attiva l'interruttore sopra per abilitare l'autenticazione OIDC."
+    "disabledNotice": "L'SSO è attualmente disattivato. Attiva l'interruttore sopra per abilitare l'autenticazione OIDC.",
+    "mfaTitle": "Autenticazione a Due Fattori (MFA / 2FA)",
+    "mfaSubtitle": "Aggiungi un livello di sicurezza supplementare al tuo account richiedendo un codice OTP al login",
+    "enableMFA": "Abilita autenticazione a due fattori",
+    "enableMFADesc": "Richiede l'inserimento di un codice temporaneo ad ogni accesso con credenziali",
+    "mfaEnabledSuccess": "Autenticazione a due fattori abilitata con successo",
+    "mfaToggleError": "Errore durante la modifica delle impostazioni MFA",
+    "mfaSetupTitle": "Configura Autenticazione a Due Fattori",
+    "mfaSetupSubtitle": "Scansiona il codice QR con la tua app di autenticazione o inserisci la chiave segreta manualmente",
+    "mfaQrCodeAlt": "Codice QR per autenticazione a due fattori",
+    "mfaManualEntry": "Chiave per inserimento manuale",
+    "mfaCopySecret": "Copia",
+    "mfaCopied": "Copiato!",
+    "mfaInstructions": "Apri un'app di autenticazione (es. Google Authenticator, Microsoft Authenticator o 1Password) e inquadra il codice QR, oppure inserisci la chiave manualmente.",
+    "mfaDone": "Ho configurato l'app"
   }
 }

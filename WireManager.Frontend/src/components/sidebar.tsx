@@ -9,7 +9,7 @@ import { useTranslations } from 'next-intl'
 
 export function SidebarContent({ onClick }: { onClick?: () => void }) {
   const pathname = usePathname()
-  const { logout, userRole } = useAuth()
+  const { logout, userRole, isIdentity } = useAuth()
   const t = useTranslations('Sidebar')
   const tCommon = useTranslations('Common')
 
@@ -23,7 +23,6 @@ export function SidebarContent({ onClick }: { onClick?: () => void }) {
     { href: '/dashboard', label: t('servers'), icon: Monitor },
     { href: '/users', label: t('users'), icon: UserPlus },
     { href: '/audit', label: t('audit'), icon: ScrollText },
-    { href: '/settings', label: t('settings'), icon: Settings },
   ]
 
   return (
@@ -81,6 +80,26 @@ export function SidebarContent({ onClick }: { onClick?: () => void }) {
                 </Link>
               )
             })}
+          </>
+        )}
+
+        {/* Settings (Admin, or Operator if not SSO) */}
+        {(userRole === 'Admin' || (userRole === 'Operator' && !isIdentity)) && (
+          <>
+            {userRole !== 'Admin' && <div className="my-2 h-px shrink-0 bg-zinc-800" />}
+            <Link
+              href="/settings"
+              onClick={onClick}
+              className={cn(
+                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                pathname === '/settings' || pathname.startsWith('/settings/')
+                  ? 'bg-blue-600/15 text-blue-400'
+                  : 'text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200'
+              )}
+            >
+              <Settings className="size-4" />
+              {t('settings')}
+            </Link>
           </>
         )}
       </nav>
