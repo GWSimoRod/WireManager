@@ -65,6 +65,14 @@ namespace WireManager.Core.Services
                 throw new ArgumentException("Invalid username or password");
             }
 
+            // genero lo UUID se è non è presente nel db per migrazione.
+
+            if (string.IsNullOrWhiteSpace(user.UUID))
+            {
+                user.UUID = Guid.NewGuid().ToString();
+                await _context.SaveChangesAsync();
+            }
+
             var tokenString = await GenerateJWTToken(user);
 
             // Log dell'evento di login riuscito
@@ -496,7 +504,7 @@ namespace WireManager.Core.Services
             };
         }
 
-        private async Task<string> GenerateJWTToken(Users? user, int duration = 120)
+        private async Task<string> GenerateJWTToken(Users user, int duration = 120)
         {
             // genero un token di autenticazione
 
