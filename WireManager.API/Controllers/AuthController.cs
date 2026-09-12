@@ -110,6 +110,12 @@ namespace WireManager.API.Controllers
 
             try
             {
+                foreach (var claim in User.Claims)
+                {
+                    Console.WriteLine($"{claim.Type} = {claim.Value}");
+                }
+
+
                 var userUuid = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (string.IsNullOrEmpty(userUuid)) return Unauthorized();
 
