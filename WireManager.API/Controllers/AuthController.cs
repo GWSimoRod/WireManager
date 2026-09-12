@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 using WireManager.API.Attributes;
 using WireManager.Core.Domain;
@@ -14,6 +15,7 @@ namespace WireManager.API.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [RequireSetup]
+    [EnableRateLimiting("Auth")]
     public class AuthController : ControllerBase
     {
         private readonly IAuthServices _authServices;
