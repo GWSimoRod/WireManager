@@ -13,10 +13,9 @@ using WireManager.Core.Models;
 
 namespace WireManager.Core.Services
 {
-    public class TokenServices(SymmetricSecurityKey jwtKey, IHttpContextAccessor contextAccessor) : ITokenServices
+    public class TokenServices(SymmetricSecurityKey jwtKey) : ITokenServices
     {
         private readonly SymmetricSecurityKey _jwtKey = jwtKey;
-        private readonly IHttpContextAccessor _contextAccessor = contextAccessor;
 
         public async Task<string> GenerateJWTToken(Users user, int duration = 120, string? role = null)
         {

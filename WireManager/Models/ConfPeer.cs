@@ -27,7 +27,8 @@ namespace WireManager.Core.Models
 
         public virtual ICollection<UsageHistory> UsageHistories { get; set; } = new List<UsageHistory>();
         public ICollection<PeerTag> PeerTags { get; set; }  // Relazione molti-a-molti con Tag
-        protected ConfPeer() { }
+
+        public ConfPeer() { }
 
         public ConfPeer(String clientName, String privateKey, String publicKey, String address, String DNSAddress, String allowedIPs, DateTime? expireAt, int? PersistenKeepAlive)
         {

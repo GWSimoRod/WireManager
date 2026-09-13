@@ -471,15 +471,26 @@ namespace WireManager.Core.Services
 
         public async Task<String> GetPeerConfAsync(int id)
         {
-            var peer = _context.ConfPeers.AsNoTracking().FirstOrDefault(p => p.Id == id);
-            if (peer == null)
-            {
-                throw new KeyNotFoundException($"Peer with Id {id} not found.");
-            }
-            var server = _context.ConfServers.FirstOrDefault(s => s.Id == peer.ConfServerId);
+
+            var peer = await GetPeerConfObjectAsync(id);
+
+
+            var server = await _context.ConfServers.FirstOrDefaultAsync(s => s.Id == peer.ConfServerId);
             if (server == null)
             {
                 throw new KeyNotFoundException($"Server with Id {peer.ConfServerId} not found.");
+            }
+
+            return peer.GetConfClient(server);
+            
+        }
+
+        public async Task<ConfPeer> GetPeerConfObjectAsync(int id)
+        {
+            var peer = await _context.ConfPeers.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id);
+            if (peer == null)
+            {
+                throw new KeyNotFoundException($"Peer with Id {id} not found.");
             }
 
             // leggo la private key del peer dal database e la setto nel peer prima di generare la configurazione
@@ -492,7 +503,7 @@ namespace WireManager.Core.Services
 
             var lines = await File.ReadAllLinesAsync(peerConfigFileName);
 
-            foreach(var line in lines)
+            foreach (var line in lines)
             {
                 if (line.StartsWith("PrivateKey", StringComparison.OrdinalIgnoreCase))
                 {
@@ -506,8 +517,8 @@ namespace WireManager.Core.Services
                 }
             }
 
-            return peer.GetConfClient(server);
-            
+            return peer;
+
         }
 
         public async Task<byte[]> CreateQRCODE(int id)

@@ -16,6 +16,13 @@ import {
   CheckCircle2,
   AlertCircle,
   Info,
+  Database,
+  Download,
+  Upload,
+  FileJson,
+  AlertTriangle,
+  Trash2,
+  RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,9 +38,12 @@ import {
   getMfaStatus,
   enableMfa,
   disableMfa,
+  createBackup,
+  restoreBackup,
   ApiClientError,
 } from "@/lib/api-client";
 import { MfaSetupDialog } from "@/components/mfa-setup-dialog";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import type { MfaSetupResponse } from "@/lib/types";
 import { useTranslations } from "next-intl";
 
@@ -58,6 +68,19 @@ export default function SettingsPage() {
   const [oidcClientId, setOidcClientId] = useState("");
   const [oidcClientSecret, setOidcClientSecret] = useState("");
   const [showSecret, setShowSecret] = useState(false);
+
+  // Backup State (Admin only)
+  const [backupPassword, setBackupPassword] = useState("");
+  const [backupPasswordConfirm, setBackupPasswordConfirm] = useState("");
+  const [showBackupPassword, setShowBackupPassword] = useState(false);
+  const [showBackupPasswordConfirm, setShowBackupPasswordConfirm] = useState(false);
+  const [isCreatingBackup, setIsCreatingBackup] = useState(false);
+
+  const [restoreFile, setRestoreFile] = useState<File | null>(null);
+  const [restorePassword, setRestorePassword] = useState("");
+  const [showRestorePassword, setShowRestorePassword] = useState(false);
+  const [isConfirmRestoreOpen, setIsConfirmRestoreOpen] = useState(false);
+  const [isRestoringBackup, setIsRestoringBackup] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -179,6 +202,82 @@ export default function SettingsPage() {
       toast.error(message);
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function handleCreateBackup(e: FormEvent) {
+    e.preventDefault();
+
+    if (!backupPassword.trim()) {
+      toast.error(tSettings("backupPasswordRequired"));
+      return;
+    }
+
+    if (backupPassword !== backupPasswordConfirm) {
+      toast.error(tSettings("backupPasswordMismatch"));
+      return;
+    }
+
+    setIsCreatingBackup(true);
+    try {
+      const blob = await createBackup(backupPassword);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const now = new Date();
+      const dateStr = now.toISOString().slice(0, 10);
+      a.download = `wiremanager-backup-${dateStr}.json`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      setBackupPassword("");
+      setBackupPasswordConfirm("");
+      toast.success(tSettings("backupCreateSuccess"));
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : tSettings("backupCreateError");
+      toast.error(message);
+    } finally {
+      setIsCreatingBackup(false);
+    }
+  }
+
+  function handleRestoreSubmit(e: FormEvent) {
+    e.preventDefault();
+
+    if (!restoreFile) {
+      toast.error(tSettings("backupFileRequired"));
+      return;
+    }
+
+    if (!restorePassword.trim()) {
+      toast.error(tSettings("backupPasswordRequired"));
+      return;
+    }
+
+    setIsConfirmRestoreOpen(true);
+  }
+
+  async function handleConfirmRestore() {
+    if (!restoreFile || !restorePassword.trim()) return;
+
+    setIsRestoringBackup(true);
+    try {
+      await restoreBackup(restoreFile, restorePassword);
+      toast.success(tSettings("backupRestoreSuccess"));
+      setRestoreFile(null);
+      setRestorePassword("");
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : tSettings("backupRestoreError");
+      toast.error(message);
+    } finally {
+      setIsRestoringBackup(false);
     }
   }
 
@@ -520,6 +619,267 @@ export default function SettingsPage() {
                 </form>
               </div>
             )}
+
+            {/* ─── Backup & Restore Card (ADMIN ONLY) ─── */}
+            {userRole === "Admin" && (
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-6 md:p-8 shadow-xl backdrop-blur-xl">
+                {/* Section Header */}
+                <div className="mb-6 flex items-start gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-blue-400 shadow-inner">
+                    <Database className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-zinc-100">
+                      {tSettings("backupTitle")}
+                    </h2>
+                    <p className="text-xs text-zinc-400 mt-0.5">
+                      {tSettings("backupSubtitle")}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                  {/* ─── Create & Download Backup ─── */}
+                  <div className="flex flex-col justify-between rounded-xl border border-zinc-800 bg-zinc-900/40 p-5">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-sm font-medium text-zinc-200">
+                        <Download className="h-4 w-4 text-blue-400" />
+                        <span>{tSettings("backupCreateSection")}</span>
+                      </div>
+                      <p className="text-xs text-zinc-400">
+                        {tSettings("backupCreateDesc")}
+                      </p>
+
+                      <form onSubmit={handleCreateBackup} className="space-y-4">
+                        <div>
+                          <Label
+                            htmlFor="backup-password"
+                            className="text-xs text-zinc-300 mb-1.5 flex items-center gap-1.5"
+                          >
+                            <Lock className="h-3.5 w-3.5 text-zinc-400" />
+                            {tSettings("backupPassword")}
+                          </Label>
+                          <div className="relative">
+                            <Input
+                              id="backup-password"
+                              type={showBackupPassword ? "text" : "password"}
+                              placeholder={tSettings("backupPasswordPlaceholder")}
+                              value={backupPassword}
+                              onChange={(e) => setBackupPassword(e.target.value)}
+                              disabled={isCreatingBackup}
+                              className="pr-10 font-mono text-sm bg-zinc-800/50 border-zinc-700 placeholder:text-zinc-600 focus:border-blue-500 focus:ring-blue-500/20"
+                              autoComplete="new-password"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowBackupPassword(!showBackupPassword)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                              tabIndex={-1}
+                            >
+                              {showBackupPassword ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div>
+                          <Label
+                            htmlFor="backup-password-confirm"
+                            className="text-xs text-zinc-300 mb-1.5 flex items-center gap-1.5"
+                          >
+                            <Lock className="h-3.5 w-3.5 text-zinc-400" />
+                            {tSettings("backupPasswordConfirm")}
+                          </Label>
+                          <div className="relative">
+                            <Input
+                              id="backup-password-confirm"
+                              type={showBackupPasswordConfirm ? "text" : "password"}
+                              placeholder={tSettings("backupPasswordConfirmPlaceholder")}
+                              value={backupPasswordConfirm}
+                              onChange={(e) => setBackupPasswordConfirm(e.target.value)}
+                              disabled={isCreatingBackup}
+                              className="pr-10 font-mono text-sm bg-zinc-800/50 border-zinc-700 placeholder:text-zinc-600 focus:border-blue-500 focus:ring-blue-500/20"
+                              autoComplete="new-password"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowBackupPasswordConfirm(!showBackupPasswordConfirm)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                              tabIndex={-1}
+                            >
+                              {showBackupPasswordConfirm ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="pt-2">
+                          <Button
+                            id="backup-download-button"
+                            type="submit"
+                            disabled={isCreatingBackup}
+                            className="w-full cursor-pointer bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-500 hover:to-indigo-500 shadow-lg shadow-blue-600/20 transition-all duration-200"
+                          >
+                            {isCreatingBackup ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                {tSettings("backupDownloading")}
+                              </>
+                            ) : (
+                              <>
+                                <Download className="mr-2 h-4 w-4" />
+                                {tSettings("backupDownload")}
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+
+                  {/* ─── Restore Backup ─── */}
+                  <div className="flex flex-col justify-between rounded-xl border border-zinc-800 bg-zinc-900/40 p-5">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-sm font-medium text-zinc-200">
+                        <RotateCcw className="h-4 w-4 text-amber-400" />
+                        <span>{tSettings("backupRestoreSection")}</span>
+                      </div>
+                      <p className="text-xs text-zinc-400">
+                        {tSettings("backupRestoreDesc")}
+                      </p>
+
+                      {/* Warning notice */}
+                      <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300">
+                        <AlertTriangle className="h-4 w-4 shrink-0 text-amber-400 mt-0.5" />
+                        <span>{tSettings("backupRestoreWarning")}</span>
+                      </div>
+
+                      <form onSubmit={handleRestoreSubmit} className="space-y-4">
+                        {/* File selector */}
+                        <div>
+                          <Label className="text-xs text-zinc-300 mb-1.5 block">
+                            {tSettings("backupSelectFile")}
+                          </Label>
+                          <input
+                            id="backup-file-input"
+                            type="file"
+                            accept=".json,application/json,application/octet-stream"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) setRestoreFile(file);
+                              e.target.value = "";
+                            }}
+                          />
+                          {restoreFile ? (
+                            <div className="flex items-center justify-between rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-2.5">
+                              <div className="flex items-center gap-2.5 overflow-hidden">
+                                <FileJson className="h-5 w-5 shrink-0 text-blue-400" />
+                                <div className="truncate">
+                                  <p className="truncate text-xs font-medium text-zinc-200">
+                                    {restoreFile.name}
+                                  </p>
+                                  <p className="text-[11px] text-zinc-400">
+                                    {(restoreFile.size / 1024).toFixed(1)} KB
+                                  </p>
+                                </div>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setRestoreFile(null)}
+                                className="h-7 w-7 p-0 text-zinc-400 hover:text-red-400 hover:bg-red-500/10"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <label
+                              htmlFor="backup-file-input"
+                              onDragOver={(e) => e.preventDefault()}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                const file = e.dataTransfer.files?.[0];
+                                if (file) setRestoreFile(file);
+                              }}
+                              className="flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-zinc-700 bg-zinc-800/30 p-4 text-center transition-colors hover:border-zinc-500 hover:bg-zinc-800/50"
+                            >
+                              <Upload className="h-5 w-5 text-zinc-400 mb-1" />
+                              <span className="text-xs text-zinc-400">
+                                {tSettings("backupDropFileHere")}
+                              </span>
+                            </label>
+                          )}
+                        </div>
+
+                        {/* Decryption Password */}
+                        <div>
+                          <Label
+                            htmlFor="restore-password"
+                            className="text-xs text-zinc-300 mb-1.5 flex items-center gap-1.5"
+                          >
+                            <Lock className="h-3.5 w-3.5 text-zinc-400" />
+                            {tSettings("backupDecryptPassword")}
+                          </Label>
+                          <div className="relative">
+                            <Input
+                              id="restore-password"
+                              type={showRestorePassword ? "text" : "password"}
+                              placeholder={tSettings("backupDecryptPasswordPlaceholder")}
+                              value={restorePassword}
+                              onChange={(e) => setRestorePassword(e.target.value)}
+                              disabled={isRestoringBackup}
+                              className="pr-10 font-mono text-sm bg-zinc-800/50 border-zinc-700 placeholder:text-zinc-600 focus:border-amber-500 focus:ring-amber-500/20"
+                              autoComplete="current-password"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowRestorePassword(!showRestorePassword)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                              tabIndex={-1}
+                            >
+                              {showRestorePassword ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="pt-2">
+                          <Button
+                            id="backup-restore-button"
+                            type="submit"
+                            disabled={isRestoringBackup || !restoreFile || !restorePassword.trim()}
+                            className="w-full cursor-pointer bg-gradient-to-r from-amber-600 to-red-600 text-white hover:from-amber-500 hover:to-red-500 shadow-lg shadow-amber-600/20 transition-all duration-200"
+                          >
+                            {isRestoringBackup ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                {tSettings("backupRestoring")}
+                              </>
+                            ) : (
+                              <>
+                                <RotateCcw className="mr-2 h-4 w-4" />
+                                {tSettings("backupRestoreButton")}
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -530,6 +890,18 @@ export default function SettingsPage() {
         onOpenChange={setIsMfaDialogOpen}
         secret={mfaSetupData?.secret || ""}
         otpauthUri={mfaSetupData?.otpauthUri || ""}
+      />
+
+      {/* ─── Backup Restore Confirmation Dialog ─── */}
+      <ConfirmDialog
+        open={isConfirmRestoreOpen}
+        onOpenChange={setIsConfirmRestoreOpen}
+        title={tSettings("backupConfirmTitle")}
+        description={tSettings("backupConfirmDescription")}
+        confirmLabel={tSettings("backupConfirmButton")}
+        variant="destructive"
+        loading={isRestoringBackup}
+        onConfirm={handleConfirmRestore}
       />
     </AuthenticatedLayout>
   );

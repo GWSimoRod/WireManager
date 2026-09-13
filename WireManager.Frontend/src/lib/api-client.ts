@@ -606,5 +606,69 @@ export async function verifyMfa(code: string, token?: string): Promise<MfaVerify
   return res.json();
 }
 
+// ─── Backup ──────────────────────────────────────────────────────────
+export async function createBackup(password: string): Promise<Blob> {
+  const res = await fetch("/api/backup", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ password }),
+  });
+
+  if (res.status === 401) {
+    if (typeof window !== "undefined") {
+      fetch("/api/auth/logout", { method: "POST" }).finally(() => {
+        window.location.href = "/login";
+      });
+    }
+    throw new ApiClientError("Non autenticato", 401);
+  }
+
+  if (!res.ok) {
+    let message = `Errore ${res.status}`;
+    try {
+      const text = await res.text();
+      if (text) message = text;
+    } catch {
+      // ignore
+    }
+    throw new ApiClientError(message, res.status);
+  }
+
+  return res.blob();
+}
+
+export async function restoreBackup(file: File, password: string): Promise<void> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("password", password);
+
+  const res = await fetch("/api/backup/restore", {
+    method: "POST",
+    body: formData,
+  });
+
+  if (res.status === 401) {
+    if (typeof window !== "undefined") {
+      fetch("/api/auth/logout", { method: "POST" }).finally(() => {
+        window.location.href = "/login";
+      });
+    }
+    throw new ApiClientError("Non autenticato", 401);
+  }
+
+  if (!res.ok) {
+    let message = `Errore ${res.status}`;
+    try {
+      const text = await res.text();
+      if (text) message = text;
+    } catch {
+      // ignore
+    }
+    throw new ApiClientError(message, res.status);
+  }
+}
+
 export { ApiClientError };
 

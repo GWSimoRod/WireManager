@@ -18,7 +18,7 @@ using WireManager.Core.Models;
 using WireManager.Core.Services;
 using WireManager.Core.Utils;
 
-Console.WriteLine("Avvio dell'applicazione WireManager API (v 0.9.9)...");
+Console.WriteLine("Avvio dell'applicazione WireManager API (v 1.0.0)...");
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -48,6 +48,7 @@ builder.Services.AddScoped<IAuditServices, AuditServices>();
 builder.Services.AddScoped<ITokenServices, TokenServices>();
 builder.Services.AddScoped<ISSOServices, SSOServices>();
 builder.Services.AddScoped<IMFAServices, MFAServices>();
+builder.Services.AddScoped<IBackupServices, BackupServices>();
 
 // Gestione della cartella base e della chiave segreta per il JWT
 var baseFolder = DiskOps._baseFolderPathServer;

@@ -1,9 +1,12 @@
-﻿namespace WireManager.Core.Models
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace WireManager.Core.Models
 {
     public class ConfServer
     {
         public int Id { get; set; }
-        private String privateKey { get; }
+        [NotMapped]
+        public String privateKey { get; set; }
         public String publicKey { get; set; }
         public String rangeIP { get; set; }
         public int listenPort { get; set; }

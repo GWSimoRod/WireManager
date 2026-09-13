@@ -15,6 +15,7 @@ namespace WireManager.Core.Models
         [JsonIgnore]
         public string? mfaSecret { get; set; }
 
+        public Users() { }
         public Users(int Id, string Username, string? Password, string Role) {
             this.Id = Id;
             this.Username = Username;

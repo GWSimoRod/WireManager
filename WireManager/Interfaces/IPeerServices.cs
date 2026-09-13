@@ -10,6 +10,7 @@ namespace WireManager.Core.Interfaces
         Task<ConfPeer> CreatePeerAsync(PeerRequestDTO peer);
         Task<bool> DeletePeerByIdAsync(int id);
         Task<String> GetPeerConfAsync(int id);
+        public Task<ConfPeer> GetPeerConfObjectAsync(int id);
         Task<byte[]> CreateQRCODE(int id);
         Task<bool> UpdatePeerAsync(int id, PeerRequestDTO peerDto);
         Task<bool> AddPolicyToPeer(int peerId, int policyId);
