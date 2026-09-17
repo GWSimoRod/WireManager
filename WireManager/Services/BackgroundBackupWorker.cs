@@ -44,8 +44,6 @@ namespace WireManager.Core.Services
         private async Task AutomaticBackupWorker(CancellationToken cancellation)
         {
 
-            _logger.LogInformation("[BACKUP WORKER] Creazione nuovo backup.");
-
             using var scope = _scopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<WireManagerContext>();
             var backupServices = scope.ServiceProvider.GetRequiredService<IBackupServices>();
@@ -58,17 +56,28 @@ namespace WireManager.Core.Services
 
                 if (conf == null)
                 {
-                    _logger.LogInformation("[BACKUP WORKER] Nessn backup automatico impostato");
+                    _logger.LogInformation("[BACKUP WORKER] Nessun backup automatico impostato");
                     return;
                 }
 
-                var now = DateTime.Now.TimeOfDay;
+                var now = DateTime.Now;
 
-                if (now.Hours != conf.Schedule.Hour ||
-                    now.Minutes != conf.Schedule.Minute)
+                if (now.Hour != conf.Schedule.Hour ||
+                    now.Minute != conf.Schedule.Minute)
                 {
+                    _logger.LogInformation(
+                        "[BACKUP WORKER] Time non raggiunto. Ora: {CurrentTime}, schedulato: {Schedule}",
+                        now.ToString("HH:mm"),
+                        conf.Schedule.ToString("HH:mm")
+                    );
+
                     return;
                 }
+
+                _logger.LogInformation(
+                    "[BACKUP WORKER] Creazione nuovo backup alle {CurrentTime}.",
+                    now.ToString("HH:mm")
+                );
 
                 // creo il backup
                 var newBackup = await backupServices.CreateBackupAsync(_backupDataProtector.Unprotect(conf.Password));

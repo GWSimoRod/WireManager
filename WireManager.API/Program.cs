@@ -18,7 +18,7 @@ using WireManager.Core.Models;
 using WireManager.Core.Services;
 using WireManager.Core.Utils;
 
-Console.WriteLine("Avvio dell'applicazione WireManager API (v 1.1.0)...");
+Console.WriteLine("Avvio dell'applicazione WireManager API (v 1.1.1)...");
 
 var builder = WebApplication.CreateBuilder(args);
 
