@@ -18,6 +18,7 @@ namespace WireManager.Core.Data
         public DbSet<Audit> Audits { get; set; }
         public DbSet<AuthenticationSSO> AuthenticationSSOs { get; set; }
         public DbSet<UserIdentity> UserIdentities { get; set; }
+        public DbSet<AutomaticBackup> AutomaticBackups { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -110,8 +111,13 @@ namespace WireManager.Core.Data
             modelBuilder.Entity<UserIdentity>()
                 .HasIndex(x => new { x.Issuer, x.Subject })
                 .IsUnique();
-                
 
+            modelBuilder.Entity<AutomaticBackup>()
+                .Property(x => x.Schedule)
+                .HasConversion(
+                    x => x.ToTimeSpan(),
+                    x => TimeOnly.FromTimeSpan(x)
+                );
         }
 
     }

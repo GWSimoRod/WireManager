@@ -11,8 +11,8 @@ using WireManager.Core.Data;
 namespace WireManager.Core.Migrations
 {
     [DbContext(typeof(WireManagerContext))]
-    [Migration("20260825114259_KeepAlive")]
-    partial class KeepAlive
+    [Migration("20260917105526_time")]
+    partial class time
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -21,6 +21,92 @@ namespace WireManager.Core.Migrations
             modelBuilder
                 .HasAnnotation("ProductVersion", "10.0.9")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
+
+            modelBuilder.Entity("WireManager.Core.Models.Audit", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("ActorId")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("ActorType")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Details")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Entity")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("EntityId")
+                        .HasColumnType("longtext");
+
+                    b.Property<bool>("IsSuccess")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Audits");
+                });
+
+            modelBuilder.Entity("WireManager.Core.Models.AuthenticationSSO", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<string>("OidcAuthority")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("OidcClientId")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("OidcClientSecret")
+                        .HasColumnType("longtext");
+
+                    b.Property<bool>("OidcEnabled")
+                        .HasColumnType("tinyint(1)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AuthenticationSSOs");
+                });
+
+            modelBuilder.Entity("WireManager.Core.Models.AutomaticBackup", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Password")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<TimeSpan>("Schedule")
+                        .HasColumnType("time(6)");
+
+                    b.Property<int>("retention")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AutomaticBackups");
+                });
 
             modelBuilder.Entity("WireManager.Core.Models.ConfPeer", b =>
                 {
@@ -57,7 +143,9 @@ namespace WireManager.Core.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.Property<int?>("PersistentKeepAlive")
-                        .HasColumnType("int");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
 
                     b.Property<string>("PublicKey")
                         .IsRequired()
@@ -227,6 +315,36 @@ namespace WireManager.Core.Migrations
                     b.ToTable("UsageHistories", (string)null);
                 });
 
+            modelBuilder.Entity("WireManager.Core.Models.UserIdentity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<string>("Issuer")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("UserUUID")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Issuer", "Subject")
+                        .IsUnique();
+
+                    b.ToTable("UserIdentities");
+                });
+
             modelBuilder.Entity("WireManager.Core.Models.Users", b =>
                 {
                     b.Property<int>("Id")
@@ -234,7 +352,6 @@ namespace WireManager.Core.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Password")
-                        .IsRequired()
                         .HasColumnType("longtext");
 
                     b.Property<string>("Role")
@@ -248,6 +365,12 @@ namespace WireManager.Core.Migrations
                     b.Property<string>("Username")
                         .IsRequired()
                         .HasColumnType("varchar(255)");
+
+                    b.Property<bool>("mfaEnabled")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("mfaSecret")
+                        .HasColumnType("longtext");
 
                     b.HasKey("Id");
 

@@ -183,6 +183,7 @@ builder.Services.AddSingleton<IConfigureOptions<OpenIdConnectOptions>, OidcOptio
 // Registrazione dei processi in background
 builder.Services.AddHostedService<PeerExpirationWorker>();
 builder.Services.AddHostedService<PeerUsageServices>();
+builder.Services.AddHostedService<BackgroundBackupWorker>();
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {

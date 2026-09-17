@@ -22,6 +22,7 @@ namespace WireManager.Core.Services
         private readonly IAuditServices _auditServices = auditServices;
         private readonly IFirewallServices _firewallServices = firewallServices;
         private readonly IDataProtector _dataProtector = dataProtectionProvider.CreateProtector("WireManager.MFA.Secret");
+        private readonly IDataProtector _backupDataProtector = dataProtectionProvider.CreateProtector("WireManager.Backup.Password");
         public async Task<byte[]> CreateBackupAsync(string password)
         {
 
@@ -110,6 +111,69 @@ namespace WireManager.Core.Services
             }
 
             
+        }
+
+        public async Task ConfigureAutomaticBackupAsync(AutomaticBackup settings)
+        {
+            try
+            {
+                var existingSettings = await _context.AutomaticBackups.FirstOrDefaultAsync();
+
+                if (existingSettings == null)
+                {
+                    existingSettings = new AutomaticBackup
+                    {
+                        Enabled = settings.Enabled,
+                        Password = _backupDataProtector.Protect(settings.Password),
+                        retention = settings.retention,
+                        Schedule = settings.Schedule
+                    };
+
+                    await _context.AutomaticBackups.AddAsync(existingSettings);
+                }
+                else
+                {
+                    existingSettings.Enabled = settings.Enabled;
+                    existingSettings.retention = settings.retention;
+                    existingSettings.Schedule = settings.Schedule;
+
+                    if (!string.IsNullOrWhiteSpace(settings.Password))
+                    {
+                        existingSettings.Password =
+                            _backupDataProtector.Protect(settings.Password);
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+
+                await _auditServices.AuditLog(
+                    "Backup.InitializeAutomatic",
+                    "Backup",
+                    null,
+                    true,
+                    null
+                );
+
+            }
+            catch (Exception ex)
+            {
+                await _auditServices.AuditLog(
+                    "Backup.InitializeAutomatic",
+                    "Backup",
+                    null,
+                    false,
+                    "Error during initialize automatic backup: " + ex.Message
+                );
+
+                Console.WriteLine(
+                    "[Backup]: Failed to initialize automatic backup: " + ex.Message
+                );
+            }
+        }
+
+        public async Task<AutomaticBackup?> GetAutomaticBackupConfAsync()
+        {
+            return await _context.AutomaticBackups.FirstOrDefaultAsync();
         }
 
         private async Task CreateDatabaseBackupAsync(BackupData backup)

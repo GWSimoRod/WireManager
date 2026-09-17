@@ -4,6 +4,7 @@ using WireManager.API.Attributes;
 using WireManager.Core.Domain;
 using WireManager.Core.DTO;
 using WireManager.Core.Interfaces;
+using WireManager.Core.Models;
 
 namespace WireManager.API.Controllers
 {
@@ -73,6 +74,47 @@ namespace WireManager.API.Controllers
             }
         }
 
+        [HttpPost("automatic")]
+        [Authorize(Roles = AppRoles.Admin)]
+        public async Task<IActionResult> ConfigureAutomaticBackup([FromBody] AutomaticBackup backup)
+        {
+            try
+            {
+                await _backupServices.ConfigureAutomaticBackupAsync(backup);
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    "[Backup]: Configure automatic backup failed: " + ex.Message);
+
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpGet("automatic")]
+        public async Task<IActionResult> GetAutomaticBackupConf()
+        {
+            try
+            {
+                var conf = await _backupServices.GetAutomaticBackupConfAsync();
+
+                return Ok(conf != null ? new
+                {
+                    conf.Enabled,
+                    conf.retention,
+                    conf.Schedule
+                } : null);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    "[Backup]: Configure automatic backup failed: " + ex.Message);
+
+                return BadRequest(ex.Message);
+            }
+        }
 
     }
 }

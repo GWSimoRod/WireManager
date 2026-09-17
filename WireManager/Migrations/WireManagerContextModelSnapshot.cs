@@ -81,6 +81,30 @@ namespace WireManager.Core.Migrations
                     b.ToTable("AuthenticationSSOs");
                 });
 
+            modelBuilder.Entity("WireManager.Core.Models.AutomaticBackup", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Password")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<TimeSpan>("Schedule")
+                        .HasColumnType("time(6)");
+
+                    b.Property<int>("retention")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AutomaticBackups");
+                });
+
             modelBuilder.Entity("WireManager.Core.Models.ConfPeer", b =>
                 {
                     b.Property<int>("Id")

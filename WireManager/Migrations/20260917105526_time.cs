@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 using MySql.EntityFrameworkCore.Metadata;
 
 #nullable disable
@@ -6,12 +7,67 @@ using MySql.EntityFrameworkCore.Metadata;
 namespace WireManager.Core.Migrations
 {
     /// <inheritdoc />
-    public partial class Adddomain : Migration
+    public partial class time : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AlterDatabase()
+                .Annotation("MySQL:Charset", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "Audits",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySQL:ValueGenerationStrategy", MySQLValueGenerationStrategy.IdentityColumn),
+                    Timestamp = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    ActorId = table.Column<string>(type: "longtext", nullable: false),
+                    ActorType = table.Column<string>(type: "longtext", nullable: false),
+                    Action = table.Column<string>(type: "longtext", nullable: false),
+                    Entity = table.Column<string>(type: "longtext", nullable: false),
+                    EntityId = table.Column<string>(type: "longtext", nullable: true),
+                    IsSuccess = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    Details = table.Column<string>(type: "longtext", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Audits", x => x.Id);
+                })
+                .Annotation("MySQL:Charset", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "AuthenticationSSOs",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySQL:ValueGenerationStrategy", MySQLValueGenerationStrategy.IdentityColumn),
+                    OidcEnabled = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    OidcAuthority = table.Column<string>(type: "longtext", nullable: true),
+                    OidcClientId = table.Column<string>(type: "longtext", nullable: true),
+                    OidcClientSecret = table.Column<string>(type: "longtext", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AuthenticationSSOs", x => x.Id);
+                })
+                .Annotation("MySQL:Charset", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "AutomaticBackups",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySQL:ValueGenerationStrategy", MySQLValueGenerationStrategy.IdentityColumn),
+                    Enabled = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    Password = table.Column<string>(type: "longtext", nullable: false),
+                    retention = table.Column<int>(type: "int", nullable: false),
+                    Schedule = table.Column<TimeSpan>(type: "time(6)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AutomaticBackups", x => x.Id);
+                })
                 .Annotation("MySQL:Charset", "utf8mb4");
 
             migrationBuilder.CreateTable(
@@ -41,7 +97,8 @@ namespace WireManager.Core.Migrations
                     Port = table.Column<int>(type: "int", nullable: false),
                     Protocol = table.Column<string>(type: "longtext", nullable: false),
                     TargetIp = table.Column<string>(type: "longtext", nullable: false),
-                    Domain = table.Column<string>(type: "longtext", nullable: true)
+                    Domain = table.Column<string>(type: "longtext", nullable: true),
+                    IsGlobal = table.Column<bool>(type: "tinyint(1)", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -79,14 +136,34 @@ namespace WireManager.Core.Migrations
                 .Annotation("MySQL:Charset", "utf8mb4");
 
             migrationBuilder.CreateTable(
+                name: "UserIdentities",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySQL:ValueGenerationStrategy", MySQLValueGenerationStrategy.IdentityColumn),
+                    UserUUID = table.Column<string>(type: "longtext", nullable: false),
+                    Provider = table.Column<string>(type: "longtext", nullable: false),
+                    Issuer = table.Column<string>(type: "varchar(255)", nullable: false),
+                    Subject = table.Column<string>(type: "varchar(255)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserIdentities", x => x.Id);
+                })
+                .Annotation("MySQL:Charset", "utf8mb4");
+
+            migrationBuilder.CreateTable(
                 name: "Users",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("MySQL:ValueGenerationStrategy", MySQLValueGenerationStrategy.IdentityColumn),
                     Username = table.Column<string>(type: "varchar(255)", nullable: false),
-                    Password = table.Column<string>(type: "longtext", nullable: false),
-                    Role = table.Column<string>(type: "longtext", nullable: false)
+                    Password = table.Column<string>(type: "longtext", nullable: true),
+                    Role = table.Column<string>(type: "longtext", nullable: false),
+                    UUID = table.Column<string>(type: "longtext", nullable: false),
+                    mfaEnabled = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    mfaSecret = table.Column<string>(type: "longtext", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -105,8 +182,10 @@ namespace WireManager.Core.Migrations
                     Address = table.Column<string>(type: "longtext", nullable: false),
                     DNSAddress = table.Column<string>(type: "longtext", nullable: false),
                     AllowedIPs = table.Column<string>(type: "longtext", nullable: false),
+                    PersistentKeepAlive = table.Column<int>(type: "int", nullable: true, defaultValue: 0),
                     IsActive = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     LastHandShake = table.Column<DateTime>(type: "datetime(6)", nullable: true),
+                    ExpireAt = table.Column<DateTime>(type: "datetime(6)", nullable: true),
                     ConfServerId = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
@@ -218,6 +297,12 @@ namespace WireManager.Core.Migrations
                 columns: new[] { "PublicKey", "Timestamp" });
 
             migrationBuilder.CreateIndex(
+                name: "IX_UserIdentities_Issuer_Subject",
+                table: "UserIdentities",
+                columns: new[] { "Issuer", "Subject" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Users_Username",
                 table: "Users",
                 column: "Username",
@@ -227,6 +312,15 @@ namespace WireManager.Core.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "Audits");
+
+            migrationBuilder.DropTable(
+                name: "AuthenticationSSOs");
+
+            migrationBuilder.DropTable(
+                name: "AutomaticBackups");
+
             migrationBuilder.DropTable(
                 name: "PeerTags");
 
@@ -238,6 +332,9 @@ namespace WireManager.Core.Migrations
 
             migrationBuilder.DropTable(
                 name: "UsageHistories");
+
+            migrationBuilder.DropTable(
+                name: "UserIdentities");
 
             migrationBuilder.DropTable(
                 name: "Users");

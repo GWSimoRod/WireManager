@@ -4,6 +4,7 @@
     {
         // gestire path sia default che custom
         private static string BaseFolder = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "config"));
+        public static string _baseFolderPathBackup = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "backup"));
         public static string _baseFolderPath => BaseFolder;
         public static string _baseFolderPathPeer => Path.Combine(_baseFolderPath, "peers");
         public static string _baseFolderPathServer => Path.Combine(_baseFolderPath, "wg_confs");
@@ -26,12 +27,14 @@
             Directory.CreateDirectory(_baseFolderPath);
             Directory.CreateDirectory(_baseFolderPathPeer);
             Directory.CreateDirectory(_baseFolderPathServer);
+            Directory.CreateDirectory(_baseFolderPathBackup);
             
             // stampo tutte le path
 
             Console.WriteLine($"Base folder path: {_baseFolderPath}");
             Console.WriteLine($"Peer folder path: {_baseFolderPathPeer}");
             Console.WriteLine($"Server folder path: {_baseFolderPathServer}");
+            Console.WriteLine($"Backup folder path: {_baseFolderPathBackup}");
 
             string absoluteFilePath = Path.GetFullPath(_baseFolderPath);
             Console.WriteLine($"[DEBUG PATH] => {absoluteFilePath}");

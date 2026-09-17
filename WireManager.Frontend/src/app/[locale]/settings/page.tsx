@@ -23,6 +23,7 @@ import {
   AlertTriangle,
   Trash2,
   RotateCcw,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,11 +41,13 @@ import {
   disableMfa,
   createBackup,
   restoreBackup,
+  configureAutomaticBackup,
+  getAutomaticBackup,
   ApiClientError,
 } from "@/lib/api-client";
 import { MfaSetupDialog } from "@/components/mfa-setup-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import type { MfaSetupResponse } from "@/lib/types";
+import type { MfaSetupResponse, AutomaticBackupResponse } from "@/lib/types";
 import { useTranslations } from "next-intl";
 
 export default function SettingsPage() {
@@ -81,6 +84,17 @@ export default function SettingsPage() {
   const [showRestorePassword, setShowRestorePassword] = useState(false);
   const [isConfirmRestoreOpen, setIsConfirmRestoreOpen] = useState(false);
   const [isRestoringBackup, setIsRestoringBackup] = useState(false);
+
+  // Automatic Backup State (Admin only)
+  const [autoBackupEnabled, setAutoBackupEnabled] = useState(false);
+  const [autoBackupSchedule, setAutoBackupSchedule] = useState("03:00");
+  const [autoBackupRetention, setAutoBackupRetention] = useState<number>(7);
+  const [autoBackupPassword, setAutoBackupPassword] = useState("");
+  const [autoBackupPasswordConfirm, setAutoBackupPasswordConfirm] = useState("");
+  const [showAutoBackupPassword, setShowAutoBackupPassword] = useState(false);
+  const [showAutoBackupPasswordConfirm, setShowAutoBackupPasswordConfirm] = useState(false);
+  const [isSavingAutoBackup, setIsSavingAutoBackup] = useState(false);
+  const [activeAutoBackupConf, setActiveAutoBackupConf] = useState<AutomaticBackupResponse | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -121,6 +135,27 @@ export default function SettingsPage() {
           const message =
             err instanceof ApiClientError ? err.message : tSettings("loadError");
           toast.error(message);
+        }
+
+        // Fetch Automatic Backup configuration (Admin only)
+        try {
+          const autoBackupConf = await getAutomaticBackup();
+          if (autoBackupConf) {
+            setActiveAutoBackupConf(autoBackupConf);
+            const isEnabled = Boolean(autoBackupConf.Enabled ?? autoBackupConf.enabled);
+            setAutoBackupEnabled(isEnabled);
+            if (autoBackupConf.retention) {
+              setAutoBackupRetention(autoBackupConf.retention);
+            }
+            const sched = autoBackupConf.Schedule ?? autoBackupConf.schedule;
+            if (sched) {
+              setAutoBackupSchedule(sched.slice(0, 5));
+            }
+          } else {
+            setActiveAutoBackupConf(null);
+          }
+        } catch (err) {
+          console.error("Failed to load automatic backup configuration:", err);
         }
       }
     } finally {
@@ -278,6 +313,58 @@ export default function SettingsPage() {
       toast.error(message);
     } finally {
       setIsRestoringBackup(false);
+    }
+  }
+
+  async function handleAutoBackupSubmit(e: FormEvent) {
+    e.preventDefault();
+
+    if (autoBackupEnabled) {
+      if (!autoBackupPassword.trim()) {
+        toast.error(tSettings("autoBackupPasswordRequired"));
+        return;
+      }
+      if (autoBackupPassword !== autoBackupPasswordConfirm) {
+        toast.error(tSettings("autoBackupPasswordMismatch"));
+        return;
+      }
+      if (!autoBackupSchedule) {
+        toast.error(tSettings("autoBackupScheduleRequired"));
+        return;
+      }
+      if (!autoBackupRetention || autoBackupRetention < 1) {
+        toast.error(tSettings("autoBackupRetentionInvalid"));
+        return;
+      }
+    }
+
+    setIsSavingAutoBackup(true);
+    try {
+      const scheduleFormatted =
+        autoBackupSchedule.length === 5
+          ? `${autoBackupSchedule}:00`
+          : autoBackupSchedule;
+
+      await configureAutomaticBackup({
+        Enabled: autoBackupEnabled,
+        Password: autoBackupPassword,
+        retention: Number(autoBackupRetention),
+        Schedule: scheduleFormatted,
+      });
+
+      setActiveAutoBackupConf({
+        Enabled: autoBackupEnabled,
+        retention: Number(autoBackupRetention),
+        Schedule: scheduleFormatted,
+      });
+
+      toast.success(tSettings("autoBackupSaveSuccess"));
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : tSettings("autoBackupSaveError");
+      toast.error(message);
+    } finally {
+      setIsSavingAutoBackup(false);
     }
   }
 
@@ -878,6 +965,310 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* ─── Automatic Backup Card (ADMIN ONLY) ─── */}
+            {userRole === "Admin" && (
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-6 md:p-8 shadow-xl backdrop-blur-xl">
+                {/* Section Header */}
+                <div className="mb-6 flex items-start gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-blue-400 shadow-inner">
+                    <Clock className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-zinc-100">
+                      {tSettings("autoBackupTitle")}
+                    </h2>
+                    <p className="text-xs text-zinc-400 mt-0.5">
+                      {tSettings("autoBackupSubtitle")}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Currently Active Configuration Banner */}
+                {activeAutoBackupConf ? (
+                  <div className="mb-6 rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 shadow-sm shadow-blue-500/5">
+                    <div className="flex items-center justify-between gap-2 border-b border-blue-500/15 pb-2.5 mb-3">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-blue-400" />
+                        <span className="text-xs font-semibold uppercase tracking-wider text-blue-300">
+                          {tSettings("autoBackupActiveConfigTitle")}
+                        </span>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] px-2 py-0.5 ${
+                          Boolean(activeAutoBackupConf.Enabled ?? activeAutoBackupConf.enabled)
+                            ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20"
+                            : "bg-zinc-800 text-zinc-400 border-zinc-700"
+                        }`}
+                      >
+                        {Boolean(activeAutoBackupConf.Enabled ?? activeAutoBackupConf.enabled)
+                          ? tSettings("statusActive")
+                          : tSettings("statusInactive")}
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 text-xs">
+                      <div className="flex items-center gap-2 text-zinc-300">
+                        <span className="text-zinc-500">{tSettings("autoBackupScheduleLabel")}</span>
+                        <span className="font-mono font-medium text-zinc-200">
+                          {tSettings("autoBackupDailyAt", {
+                            time: (activeAutoBackupConf.Schedule ?? activeAutoBackupConf.schedule ?? "03:00").slice(0, 5),
+                          })}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-zinc-300">
+                        <span className="text-zinc-500">{tSettings("autoBackupRetentionLabel")}</span>
+                        <span className="font-mono font-medium text-zinc-200">
+                          {tSettings("autoBackupRetentionValue", {
+                            days: activeAutoBackupConf.retention ?? 7,
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mb-6 rounded-xl border border-zinc-800/80 bg-zinc-900/40 px-4 py-3 flex items-center gap-2.5 text-xs text-zinc-400">
+                    <Info className="h-4 w-4 shrink-0 text-zinc-500" />
+                    <span>{tSettings("autoBackupActiveConfigNone")}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleAutoBackupSubmit} className="space-y-6">
+                  {/* Switch activation card */}
+                  <div
+                    className={`flex flex-col gap-4 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between transition-colors duration-200 ${
+                      autoBackupEnabled
+                        ? "border-blue-500/30 bg-blue-500/5 shadow-sm shadow-blue-500/10"
+                        : "border-zinc-800 bg-zinc-800/30"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      {autoBackupEnabled ? (
+                        <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-400" />
+                      ) : (
+                        <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-zinc-500" />
+                      )}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <Label
+                            htmlFor="auto-backup-toggle"
+                            className="cursor-pointer font-medium text-zinc-100 text-sm"
+                          >
+                            {tSettings("enableAutoBackup")}
+                          </Label>
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] px-2 py-0.5 ${
+                              autoBackupEnabled
+                                ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20"
+                                : "bg-zinc-800 text-zinc-400 border-zinc-700"
+                            }`}
+                          >
+                            {autoBackupEnabled
+                              ? tSettings("statusActive")
+                              : tSettings("statusInactive")}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-zinc-400 mt-1">
+                          {tSettings("enableAutoBackupDesc")}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center">
+                      <Switch
+                        id="auto-backup-toggle"
+                        checked={autoBackupEnabled}
+                        onCheckedChange={(checked) => setAutoBackupEnabled(checked)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Form fields section with dimmed look when disabled */}
+                  <div
+                    className={`space-y-5 rounded-xl border p-5 transition-all duration-200 ${
+                      autoBackupEnabled
+                        ? "border-zinc-800 bg-zinc-900/40"
+                        : "border-zinc-800/60 bg-zinc-950/40 opacity-70"
+                    }`}
+                  >
+                    {!autoBackupEnabled && (
+                      <div className="flex items-center gap-2.5 rounded-lg border border-zinc-800/80 bg-zinc-900/60 px-3 py-2 text-xs text-zinc-400">
+                        <Info className="h-4 w-4 shrink-0 text-zinc-500" />
+                        <span>{tSettings("autoBackupDisabledNotice")}</span>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                      {/* Schedule Time */}
+                      <div>
+                        <Label
+                          htmlFor="auto-backup-schedule"
+                          className="text-xs text-zinc-300 mb-1.5 flex items-center gap-1.5"
+                        >
+                          <Clock className="h-3.5 w-3.5 text-zinc-400" />
+                          {tSettings("autoBackupSchedule")}
+                        </Label>
+                        <Input
+                          id="auto-backup-schedule"
+                          type="time"
+                          step="60"
+                          value={autoBackupSchedule}
+                          onChange={(e) => setAutoBackupSchedule(e.target.value)}
+                          disabled={isSavingAutoBackup || !autoBackupEnabled}
+                          className={`font-mono text-sm transition-colors ${
+                            autoBackupEnabled
+                              ? "bg-zinc-800/50 border-zinc-700 placeholder:text-zinc-600 focus:border-blue-500 focus:ring-blue-500/20"
+                              : "bg-zinc-900/50 border-zinc-800 text-zinc-500 placeholder:text-zinc-700 cursor-not-allowed"
+                          }`}
+                        />
+                        <p className="mt-1 text-[11px] text-zinc-500">
+                          {tSettings("autoBackupScheduleHint")}
+                        </p>
+                      </div>
+
+                      {/* Retention in days */}
+                      <div>
+                        <Label
+                          htmlFor="auto-backup-retention"
+                          className="text-xs text-zinc-300 mb-1.5 flex items-center gap-1.5"
+                        >
+                          <Database className="h-3.5 w-3.5 text-zinc-400" />
+                          {tSettings("autoBackupRetention")}
+                        </Label>
+                        <Input
+                          id="auto-backup-retention"
+                          type="number"
+                          min={1}
+                          max={365}
+                          placeholder={tSettings("autoBackupRetentionPlaceholder")}
+                          value={autoBackupRetention}
+                          onChange={(e) =>
+                            setAutoBackupRetention(Math.max(1, parseInt(e.target.value, 10) || 1))
+                          }
+                          disabled={isSavingAutoBackup || !autoBackupEnabled}
+                          className={`font-mono text-sm transition-colors ${
+                            autoBackupEnabled
+                              ? "bg-zinc-800/50 border-zinc-700 placeholder:text-zinc-600 focus:border-blue-500 focus:ring-blue-500/20"
+                              : "bg-zinc-900/50 border-zinc-800 text-zinc-500 placeholder:text-zinc-700 cursor-not-allowed"
+                          }`}
+                        />
+                        <p className="mt-1 text-[11px] text-zinc-500">
+                          {tSettings("autoBackupRetentionHint")}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Encryption Password */}
+                    <div>
+                      <Label
+                        htmlFor="auto-backup-password"
+                        className="text-xs text-zinc-300 mb-1.5 flex items-center gap-1.5"
+                      >
+                        <Lock className="h-3.5 w-3.5 text-zinc-400" />
+                        {tSettings("autoBackupPassword")}
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="auto-backup-password"
+                          type={showAutoBackupPassword ? "text" : "password"}
+                          placeholder={tSettings("autoBackupPasswordPlaceholder")}
+                          value={autoBackupPassword}
+                          onChange={(e) => setAutoBackupPassword(e.target.value)}
+                          disabled={isSavingAutoBackup || !autoBackupEnabled}
+                          className={`pr-10 font-mono text-sm transition-colors ${
+                            autoBackupEnabled
+                              ? "bg-zinc-800/50 border-zinc-700 placeholder:text-zinc-600 focus:border-blue-500 focus:ring-blue-500/20"
+                              : "bg-zinc-900/50 border-zinc-800 text-zinc-500 placeholder:text-zinc-700 cursor-not-allowed"
+                          }`}
+                          autoComplete="new-password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowAutoBackupPassword(!showAutoBackupPassword)}
+                          disabled={isSavingAutoBackup || !autoBackupEnabled}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          tabIndex={-1}
+                        >
+                          {showAutoBackupPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                      <p className="mt-1 text-[11px] text-zinc-500">
+                        {tSettings("autoBackupPasswordHint")}
+                      </p>
+                    </div>
+
+                    {/* Confirm Password */}
+                    <div>
+                      <Label
+                        htmlFor="auto-backup-password-confirm"
+                        className="text-xs text-zinc-300 mb-1.5 flex items-center gap-1.5"
+                      >
+                        <Lock className="h-3.5 w-3.5 text-zinc-400" />
+                        {tSettings("autoBackupPasswordConfirm")}
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="auto-backup-password-confirm"
+                          type={showAutoBackupPasswordConfirm ? "text" : "password"}
+                          placeholder={tSettings("autoBackupPasswordConfirmPlaceholder")}
+                          value={autoBackupPasswordConfirm}
+                          onChange={(e) => setAutoBackupPasswordConfirm(e.target.value)}
+                          disabled={isSavingAutoBackup || !autoBackupEnabled}
+                          className={`pr-10 font-mono text-sm transition-colors ${
+                            autoBackupEnabled
+                              ? "bg-zinc-800/50 border-zinc-700 placeholder:text-zinc-600 focus:border-blue-500 focus:ring-blue-500/20"
+                              : "bg-zinc-900/50 border-zinc-800 text-zinc-500 placeholder:text-zinc-700 cursor-not-allowed"
+                          }`}
+                          autoComplete="new-password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setShowAutoBackupPasswordConfirm(!showAutoBackupPasswordConfirm)
+                          }
+                          disabled={isSavingAutoBackup || !autoBackupEnabled}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          tabIndex={-1}
+                        >
+                          {showAutoBackupPasswordConfirm ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Save button */}
+                  <div className="flex justify-end pt-2">
+                    <Button
+                      id="auto-backup-save-button"
+                      type="submit"
+                      disabled={isSavingAutoBackup}
+                      className="cursor-pointer bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-500 hover:to-blue-600 shadow-lg shadow-blue-600/20 transition-all duration-200 px-6"
+                    >
+                      {isSavingAutoBackup ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          {tSettings("autoBackupSaving")}
+                        </>
+                      ) : (
+                        <>
+                          <Save className="mr-2 h-4 w-4" />
+                          {tSettings("autoBackupSave")}
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </form>
               </div>
             )}
           </div>

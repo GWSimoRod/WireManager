@@ -25,6 +25,8 @@ import type {
   MfaEnabledResponse,
   MfaSetupResponse,
   LoginResult,
+  AutomaticBackupRequest,
+  AutomaticBackupResponse,
 } from "./types";
 
 export interface PaginatedResult<T> {
@@ -670,5 +672,65 @@ export async function restoreBackup(file: File, password: string): Promise<void>
   }
 }
 
+export async function configureAutomaticBackup(
+  data: AutomaticBackupRequest
+): Promise<void> {
+  const res = await fetch("/api/backup/automatic", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (res.status === 401) {
+    if (typeof window !== "undefined") {
+      fetch("/api/auth/logout", { method: "POST" }).finally(() => {
+        window.location.href = "/login";
+      });
+    }
+    throw new ApiClientError("Non autenticato", 401);
+  }
+
+  if (!res.ok) {
+    let message = `Errore ${res.status}`;
+    try {
+      const text = await res.text();
+      if (text) message = text;
+    } catch {
+      // ignore
+    }
+    throw new ApiClientError(message, res.status);
+  }
+}
+
+export async function getAutomaticBackup(): Promise<AutomaticBackupResponse | null> {
+  const res = await fetch("/api/backup/automatic");
+
+  if (res.status === 401) {
+    if (typeof window !== "undefined") {
+      fetch("/api/auth/logout", { method: "POST" }).finally(() => {
+        window.location.href = "/login";
+      });
+    }
+    throw new ApiClientError("Non autenticato", 401);
+  }
+
+  if (!res.ok) {
+    let message = `Errore ${res.status}`;
+    try {
+      const text = await res.text();
+      if (text) message = text;
+    } catch {
+      // ignore
+    }
+    throw new ApiClientError(message, res.status);
+  }
+
+  return res.json().catch(() => null);
+}
+
 export { ApiClientError };
+
+
 

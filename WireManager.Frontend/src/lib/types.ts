@@ -221,3 +221,20 @@ export interface ApiError {
   status: number;
 }
 
+// ─── Automatic Backup ────────────────────────────────────────────────
+export interface AutomaticBackupRequest {
+  Enabled: boolean;
+  Password: string;
+  retention: number;
+  Schedule: string;
+}
+
+export interface AutomaticBackupResponse {
+  Enabled?: boolean;
+  enabled?: boolean;
+  retention?: number;
+  Schedule?: string;
+  schedule?: string;
+}
+
+
