@@ -11,7 +11,7 @@ using WireManager.Core.Data;
 namespace WireManager.Core.Migrations
 {
     [DbContext(typeof(WireManagerContext))]
-    [Migration("20260917133518_AddAutomaticBackup")]
+    [Migration("20260917134747_AddAutomaticBackup")]
     partial class AddAutomaticBackup
     {
         /// <inheritdoc />
