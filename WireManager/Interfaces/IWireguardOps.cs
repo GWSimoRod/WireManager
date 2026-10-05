@@ -9,5 +9,6 @@ namespace WireManager.Core.Interfaces
         public Task<bool> StopWireGuardInterfaceAsync(int serverId);
         public Task<List<PeerStatsDTO>> GetPeerStatsAsync(string Interface);
         public Task<(int ExitCode, string Output, string Error)> ExecuteCommandAsync(string command, string args, string? standardInput = null, bool skipOutputRead = false, bool shellCommand = false);
+        public IAsyncEnumerable<string> ExecuteStreamingCommandAsync(string command, string args, CancellationToken cancellationToken);
     }
 }

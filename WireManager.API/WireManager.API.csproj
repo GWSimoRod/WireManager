@@ -25,6 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\WireManager.IDS\WireManager.IDS.csproj" />
     <ProjectReference Include="..\WireManager\WireManager.Core.csproj" />
   </ItemGroup>
 

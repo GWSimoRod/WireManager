@@ -1,18 +1,18 @@
 using Microsoft.Extensions.Logging;
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using WireManager.Core.Data;
 using WireManager.Core.DTO;
 using WireManager.Core.Interfaces;
 using WireManager.Core.Models;
 using System.Linq.Expressions;
+using Microsoft.Extensions.Hosting;
 
-namespace WireManager.Core.Services
+namespace WireManager.IDS.Collectors
 {
-    public class PeerUsageServices(IServiceScopeFactory scopeFactory, ILogger<PeerUsageServices> logger) : BackgroundService
+    public class PeerUsageCollector(IServiceScopeFactory scopeFactory, ILogger<PeerUsageCollector> logger) : BackgroundService
     {
-        private readonly ILogger<PeerUsageServices> _logger = logger;
+        private readonly ILogger<PeerUsageCollector> _logger = logger;
         private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
         private readonly TimeSpan _checkInterval = TimeSpan.FromMinutes(5);
 

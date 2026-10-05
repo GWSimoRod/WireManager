@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using OtpNet;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -17,6 +16,7 @@ using WireManager.Core.Interfaces;
 using WireManager.Core.Models;
 using WireManager.Core.Services;
 using WireManager.Core.Utils;
+using WireManager.IDS.Collectors;
 
 Console.WriteLine("Avvio dell'applicazione WireManager API (v 1.1.1)...");
 
@@ -182,8 +182,9 @@ builder.Services.AddSingleton<IConfigureOptions<OpenIdConnectOptions>, OidcOptio
 
 // Registrazione dei processi in background
 builder.Services.AddHostedService<PeerExpirationWorker>();
-builder.Services.AddHostedService<PeerUsageServices>();
+builder.Services.AddHostedService<PeerUsageCollector>();
 builder.Services.AddHostedService<BackgroundBackupWorker>();
+builder.Services.AddHostedService<ConntrackCollector>();
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {

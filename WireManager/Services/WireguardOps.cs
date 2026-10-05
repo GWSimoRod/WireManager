@@ -1,7 +1,9 @@
-﻿using Microsoft.Extensions.Logging;
-﻿using Docker.DotNet;
+﻿﻿using Docker.DotNet;
 using Docker.DotNet.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using System.Buffers;
+using System.Runtime.CompilerServices;
 using System.Text;
 using WireManager.Core.Data;
 using WireManager.Core.DTO;
@@ -155,6 +157,116 @@ namespace WireManager.Core.Services
                 result.stdout ?? string.Empty,
                 result.stderr ?? string.Empty
             );
+        }
+
+        public async IAsyncEnumerable<string> ExecuteStreamingCommandAsync(
+            string command,
+            string args,
+            [EnumeratorCancellation] CancellationToken cancellationToken
+        )
+        {
+            if (_dockerClient == null)
+            {
+                await GetInfoSystem();
+
+                if (_dockerClient == null)
+                {
+                    throw new InvalidOperationException(
+                        "Unable to initialize DockerClient in GetInfoSystem.");
+                }
+            }
+
+            var cmdArray = new List<string> { command };
+
+            if (!string.IsNullOrWhiteSpace(args))
+            {
+                cmdArray.AddRange(
+                    args.Split(
+                        ' ',
+                        StringSplitOptions.RemoveEmptyEntries));
+            }
+
+            _logger.LogInformation(
+                "[WireguardOps] Streaming exec: {Command}",
+                string.Join(" ", cmdArray));
+
+            var execCreateResponse =
+                await _dockerClient.Exec.ExecCreateContainerAsync(
+                    _containerName,
+                    new ContainerExecCreateParameters
+                    {
+                        Cmd = cmdArray,
+                        AttachStdout = true,
+                        AttachStderr = true
+                    },
+                    cancellationToken);
+
+            using var stream =
+                await _dockerClient.Exec.StartAndAttachContainerExecAsync(
+                    execCreateResponse.ID,
+                    false,
+                    cancellationToken);
+
+            var buffer = ArrayPool<byte>.Shared.Rent(8192);
+
+            var stdoutBuffer = new StringBuilder();
+
+            try
+            {
+                while (!cancellationToken.IsCancellationRequested)
+                {
+                    var result = await stream.ReadOutputAsync(
+                        buffer,
+                        0,
+                        buffer.Length,
+                        cancellationToken);
+
+                    if (result.EOF)
+                        break;
+
+                    if (result.Count == 0)
+                        continue;
+
+                    var text = Encoding.UTF8.GetString(
+                        buffer,
+                        0,
+                        result.Count);
+
+                    if (result.Target == MultiplexedStream.TargetStream.StandardError)
+                    {
+                        _logger.LogWarning(
+                            "[WireguardOps] Streaming stderr: {Error}",
+                            text.Trim());
+
+                        continue;
+                    }
+
+                    if (result.Target != MultiplexedStream.TargetStream.StandardOut)
+                        continue;
+
+                    stdoutBuffer.Append(text);
+
+                    while (true)
+                    {
+                        var content = stdoutBuffer.ToString();
+                        var newlineIndex = content.IndexOf('\n');
+
+                        if (newlineIndex < 0)
+                            break;
+
+                        var line = content[..newlineIndex].TrimEnd('\r');
+
+                        stdoutBuffer.Remove(0, newlineIndex + 1);
+
+                        if (!string.IsNullOrWhiteSpace(line))
+                            yield return line;
+                    }
+                }
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
         }
 
         private async Task RestartWireguardContainerAsync()
