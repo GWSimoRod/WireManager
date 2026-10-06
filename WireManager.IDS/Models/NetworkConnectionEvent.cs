@@ -6,12 +6,6 @@
         Update,
         Destroy
     }
-    public enum ConnectionAuthorization
-    {
-        Unknown,
-        Allowed,
-        Denied
-    }
 
     public class NetworkConnectionEvent
     {
@@ -24,8 +18,7 @@
         public int? DestinationPort { get; set; }
         public string Protocol { get; set; } = string.Empty;
         public ConnectionEventType EventType { get; set; }
-        public ConnectionAuthorization FirewallAuthorization { get; set; } // indica se la connessione è stata autorizzata o meno dal firewall
-        public bool IsAclAuthorized { get; set; } // indica se è stato autorizzato dalle regole ACL
+        public bool? IsAclAuthorized { get; set; } // indica se è stato autorizzato dalle regole ACL
         public int? PeerId { get; set; }
 
     }

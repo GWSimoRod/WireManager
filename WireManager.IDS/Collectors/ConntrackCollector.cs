@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using WireManager.Core.Interfaces;
+using WireManager.IDS.Models;
+using WireManager.IDS.Parsers;
 
 namespace WireManager.IDS.Collectors
 {
@@ -29,7 +31,7 @@ namespace WireManager.IDS.Collectors
                     ex,
                     "Errore durante l'elaborazione del conntrack collector");
             }
-            
+
         }
 
         private async Task ProcessConntrackAsync(CancellationToken cancellationToken)
@@ -39,12 +41,13 @@ namespace WireManager.IDS.Collectors
 
             try
             {
-                await foreach(var line in _wireguardOps.ExecuteStreamingCommandAsync(
+                await foreach (var line in _wireguardOps.ExecuteStreamingCommandAsync(
                         "conntrack",
                         "-E",
                         cancellationToken
                     )
-                ) {
+                )
+                {
 
                     if (line == null)
                         break;
@@ -52,26 +55,39 @@ namespace WireManager.IDS.Collectors
                     if (string.IsNullOrWhiteSpace(line))
                         continue;
 
-                    //var connectionEvent = ParseConntrackLine(line);
+                    try
+                    {
+                        var connectionEvent = ConntrackParsers.ParseConntrackLine(line);
 
-                    //if (connectionEvent == null)
-                    //    continue;
+                        if (connectionEvent == null)
+                            continue;
 
-                    //// Per ora puoi anche solo loggarlo
-                    //_logger.LogInformation(
-                    //    "[CONNTRACK] {EventType} {Protocol} {SourceIp}:{SourcePort} -> {DestinationIp}:{DestinationPort}",
-                    //    connectionEvent.EventType,
-                    //    connectionEvent.Protocol,
-                    //    connectionEvent.SourceIP,
-                    //    connectionEvent.SourcePort,
-                    //    connectionEvent.DestinationIP,
-                    //    connectionEvent.DestinationPort
-                    //);
+                        // Per ora puoi anche solo loggarlo
+                        _logger.LogInformation(
+                            "[CONNTRACK] {EventType} {Protocol} {SourceIp}:{SourcePort} -> {DestinationIp}:{DestinationPort}",
+                            connectionEvent.EventType,
+                            connectionEvent.Protocol,
+                            connectionEvent.SourceIP,
+                            connectionEvent.SourcePort,
+                            connectionEvent.DestinationIP,
+                            connectionEvent.DestinationPort
+                        );
 
-                    _logger.LogInformation("[CONNTRACK RAW] {Line}", line);
+                        // più avanti:
+                        // await ProcessNetworkEventAsync(connectionEvent, cancellationToken);
 
-                    // più avanti:
-                    // await ProcessNetworkEventAsync(connectionEvent, cancellationToken);
+
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(
+                            ex,
+                            "Errore durante il parsing della linea del conntrack: {Line}",
+                            line
+                        );
+                        continue;
+                    }
+
                 }
             }
             catch (OperationCanceledException)
@@ -83,5 +99,6 @@ namespace WireManager.IDS.Collectors
                 _logger.LogInformation("[CONNTRACK] Monitor terminato");
             }
         }
+
     }
 }
