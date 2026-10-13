@@ -4,14 +4,16 @@ using WireManager.Core.Interfaces;
 using WireManager.IDS.Enrichment;
 using WireManager.IDS.Models;
 using WireManager.IDS.Parsers;
+using WireManager.IDS.Store;
 
 namespace WireManager.IDS.Collectors
 {
-    public class ConntrackCollector(ILogger<ConntrackCollector> logger, IWireguardOps wireguardOps, ConnectionEventEnricher connectionEventEnricher) : BackgroundService
+    public class ConntrackCollector(ILogger<ConntrackCollector> logger, IWireguardOps wireguardOps, ConnectionEventEnricher connectionEventEnricher, ConntrackStore conntrackStore) : BackgroundService
     {
         private readonly ILogger<ConntrackCollector> _logger = logger;
         private readonly IWireguardOps _wireguardOps = wireguardOps;
         private readonly ConnectionEventEnricher _connectionEventEnricher = connectionEventEnricher;
+        private readonly ConntrackStore _conntrackStore = conntrackStore;
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
@@ -80,6 +82,9 @@ namespace WireManager.IDS.Collectors
                                 : "Unknown",
                             connectionEvent.PeerId
                         );
+
+                        // salvo l'evento nel ConntrackStore
+                        _conntrackStore.Add(connectionEvent);
 
                         // più avanti:
                         // await ProcessNetworkEventAsync(connectionEvent, cancellationToken);

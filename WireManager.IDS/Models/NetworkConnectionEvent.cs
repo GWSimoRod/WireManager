@@ -11,7 +11,7 @@
     {
 
         public int Id { get; set; }
-        public DateTime Timestamp { get; set; }
+        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
         public string SourceIP { get; set; } = string.Empty;
         public int? SourcePort { get; set; }
         public string DestinationIP { get; set; } = string.Empty;

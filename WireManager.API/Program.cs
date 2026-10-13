@@ -17,6 +17,8 @@ using WireManager.Core.Models;
 using WireManager.Core.Services;
 using WireManager.Core.Utils;
 using WireManager.IDS.Collectors;
+using WireManager.IDS.Enrichment;
+using WireManager.IDS.Store;
 
 Console.WriteLine("Avvio dell'applicazione WireManager API (v 1.1.1)...");
 
@@ -49,6 +51,7 @@ builder.Services.AddScoped<ITokenServices, TokenServices>();
 builder.Services.AddScoped<ISSOServices, SSOServices>();
 builder.Services.AddScoped<IMFAServices, MFAServices>();
 builder.Services.AddScoped<IBackupServices, BackupServices>();
+builder.Services.AddScoped<ConnectionEventEnricher>();
 
 // Gestione della cartella base e della chiave segreta per il JWT
 var baseFolder = DiskOps._baseFolderPathServer;
@@ -179,6 +182,9 @@ builder.Services.AddAuthentication(options =>
 
 // Configurazione delle opzioni OpenID Connect tramite il servizio personalizzato
 builder.Services.AddSingleton<IConfigureOptions<OpenIdConnectOptions>, OidcOptionsConfiguration>();
+
+// Registrazione dei servizi di raccolta eventi
+builder.Services.AddSingleton<ConntrackStore>();
 
 // Registrazione dei processi in background
 builder.Services.AddHostedService<PeerExpirationWorker>();
