@@ -17,5 +17,14 @@
         public DateTime Timestamp { get; set; } = DateTime.UtcNow;
         public int EventCount { get; set; } = 1;
 
+        public int Score => Severity switch
+        {
+            DetectionSeverity.Low => 5,
+            DetectionSeverity.Medium => 10,
+            DetectionSeverity.High => 20,
+            DetectionSeverity.Critical => 30,
+            _ => 0
+        };
+
     }
 }

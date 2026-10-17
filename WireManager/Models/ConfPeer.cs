@@ -18,6 +18,9 @@ namespace WireManager.Core.Models
         public String AllowedIPs { get; set; }
         public int? PersistentKeepAlive {  get; set; }
         public bool IsActive { get; set; } = true;
+        public int IdsScore { get; set; } = 0;
+        public DateTime? LastIdsDetection { get; set; }
+        public DateTime? LastIdsScoreDecay { get; set; }
         public DateTime? LastHandShake {  get; set; }
         public DateTime? ExpireAt { get; set; }
 

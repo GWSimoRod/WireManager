@@ -17,8 +17,12 @@ using WireManager.Core.Models;
 using WireManager.Core.Services;
 using WireManager.Core.Utils;
 using WireManager.IDS.Collectors;
+using WireManager.IDS.Detection;
+using WireManager.IDS.Detection.Rules;
 using WireManager.IDS.Enrichment;
+using WireManager.IDS.Interfaces;
 using WireManager.IDS.Store;
+using WireManager.IDS.Worker;
 
 Console.WriteLine("Avvio dell'applicazione WireManager API (v 1.1.1)...");
 
@@ -185,12 +189,18 @@ builder.Services.AddSingleton<IConfigureOptions<OpenIdConnectOptions>, OidcOptio
 
 // Registrazione dei servizi di raccolta eventi
 builder.Services.AddSingleton<ConntrackStore>();
+builder.Services.AddSingleton<DetectionEngine>();
+
+// Registrazione regole IDS
+builder.Services.AddSingleton<IDetectionRule, PortScanRule>();
+
 
 // Registrazione dei processi in background
 builder.Services.AddHostedService<PeerExpirationWorker>();
 builder.Services.AddHostedService<PeerUsageCollector>();
 builder.Services.AddHostedService<BackgroundBackupWorker>();
 builder.Services.AddHostedService<ConntrackCollector>();
+builder.Services.AddHostedService<DetectionWorker>();
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {

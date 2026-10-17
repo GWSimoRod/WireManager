@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using WireManager.Core.Interfaces;
 using WireManager.IDS.Enrichment;
@@ -8,11 +9,10 @@ using WireManager.IDS.Store;
 
 namespace WireManager.IDS.Collectors
 {
-    public class ConntrackCollector(ILogger<ConntrackCollector> logger, IWireguardOps wireguardOps, ConnectionEventEnricher connectionEventEnricher, ConntrackStore conntrackStore) : BackgroundService
+    public class ConntrackCollector(ILogger<ConntrackCollector> logger, IServiceScopeFactory scopeFactory, ConntrackStore conntrackStore) : BackgroundService
     {
         private readonly ILogger<ConntrackCollector> _logger = logger;
-        private readonly IWireguardOps _wireguardOps = wireguardOps;
-        private readonly ConnectionEventEnricher _connectionEventEnricher = connectionEventEnricher;
+        private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
         private readonly ConntrackStore _conntrackStore = conntrackStore;
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -41,11 +41,17 @@ namespace WireManager.IDS.Collectors
         private async Task ProcessConntrackAsync(CancellationToken cancellationToken)
         {
 
+            using var scope = _scopeFactory.CreateScope();
+
+            var wireguardOps = scope.ServiceProvider
+                .GetRequiredService<IWireguardOps>();
+
+
             _logger.LogInformation("[CONNTRACK] Monitor avviato");
 
             try
             {
-                await foreach (var line in _wireguardOps.ExecuteStreamingCommandAsync(
+                await foreach (var line in wireguardOps.ExecuteStreamingCommandAsync(
                         "conntrack",
                         "-E",
                         cancellationToken
@@ -66,7 +72,13 @@ namespace WireManager.IDS.Collectors
                         if (connectionEvent == null)
                             continue;
 
-                        await _connectionEventEnricher.EnricherAsync(connectionEvent);
+                        using (var eventScope = _scopeFactory.CreateScope())
+                        {
+                            var enricher = eventScope.ServiceProvider
+                                .GetRequiredService<ConnectionEventEnricher>();
+
+                            await enricher.EnricherAsync(connectionEvent);
+                        }
 
                         // Per ora puoi anche solo loggarlo
                         _logger.LogInformation(
@@ -85,10 +97,6 @@ namespace WireManager.IDS.Collectors
 
                         // salvo l'evento nel ConntrackStore
                         _conntrackStore.Add(connectionEvent);
-
-                        // più avanti:
-                        // await ProcessNetworkEventAsync(connectionEvent, cancellationToken);
-
 
                     }
                     catch (Exception ex)

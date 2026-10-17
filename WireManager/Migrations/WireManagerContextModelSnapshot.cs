@@ -133,10 +133,19 @@ namespace WireManager.Core.Migrations
                     b.Property<DateTime?>("ExpireAt")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<int>("IdsScore")
+                        .HasColumnType("int");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<DateTime?>("LastHandShake")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("LastIdsDetection")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("LastIdsScoreDecay")
                         .HasColumnType("datetime(6)");
 
                     b.Property<int?>("PersistentKeepAlive")

@@ -16,6 +16,7 @@ namespace WireManager.IDS.Detection
 
             foreach (var rule in _rules)
             {
+
                 results.AddRange(rule.Evaluate(events));
             }
 
