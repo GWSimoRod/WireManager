@@ -72,6 +72,9 @@ export interface ConfPeer {
   allowedIPs: string;
   isActive: boolean;
   confServerId: number;
+  idsScore?: number | null;
+  lastIdsDetection?: string | null;
+  lastIdsScoreDecay?: string | null;
   expireAt?: string | null;
   persistentKeepAlive?: number | null;
   peerTags?: PeerTag[];

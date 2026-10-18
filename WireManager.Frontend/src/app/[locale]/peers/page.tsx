@@ -59,6 +59,7 @@ import { ViewToggle, type ViewMode } from "@/components/view-toggle";
 import { AuthenticatedLayout } from "@/components/authenticated-layout";
 import { PeerModal } from "@/components/peer-modal";
 import { PeerDetailDialog } from "@/components/peer-detail-dialog";
+import { IdsRiskIndicator } from "@/components/ids-risk";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { QrCodeDialog } from "@/components/qr-code-dialog";
 import {
@@ -90,6 +91,7 @@ function getExpireUrgency(expireAt: string): { color: string; label: string } {
 
 export default function PeersPage() {
   const tPeers = useTranslations("Peers");
+  const tIds = useTranslations("Ids");
   const tCommon = useTranslations("Common");
 
   const [peers, setPeers] = useState<ConfPeer[]>([]);
@@ -514,6 +516,10 @@ export default function PeersPage() {
                               )}
                             </div>
                           </div>
+                          <div className="space-y-2">
+                            <p className="text-xs text-zinc-500">{tIds("risk")}</p>
+                            <IdsRiskIndicator score={peer.idsScore} />
+                          </div>
                         </CardContent>
                         <CardFooter className="pt-3 border-t border-zinc-800/50 flex justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                           <Button variant="outline" size="icon-sm" className="bg-zinc-800/50 hover:bg-zinc-800 border-zinc-700" onClick={() => handleDownloadConf(peer)} title="Download .conf">
@@ -548,6 +554,7 @@ export default function PeersPage() {
                     <TableHead className="text-zinc-400">Allowed IPs</TableHead>
                     <TableHead className="text-zinc-400">{tPeers("server")}</TableHead>
                     <TableHead className="text-zinc-400 w-[1%] whitespace-nowrap">{tPeers("tags")}</TableHead>
+                    <TableHead className="text-zinc-400">{tIds("risk")}</TableHead>
                     <TableHead className="text-zinc-400 w-[1%] whitespace-nowrap text-center">{tPeers("status")}</TableHead>
                     <TableHead className="w-14 text-right text-zinc-400">
                       {tPeers("actions")}
@@ -650,6 +657,9 @@ export default function PeersPage() {
                               <span className="text-xs text-zinc-600 italic">—</span>
                             )}
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          <IdsRiskIndicator score={peer.idsScore} />
                         </TableCell>
                         <TableCell className="w-[1%] whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>
                           <Switch

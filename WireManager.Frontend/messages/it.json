@@ -1,4 +1,20 @@
 {
+  "Ids": {
+    "risk": "Rischio IDS",
+    "title": "Rilevamento intrusioni",
+    "score": "Punteggio IDS",
+    "scoreAndLevel": "Punteggio e livello di rischio",
+    "scoreDescription": "{score} su 100, {level}",
+    "lastDetection": "Ultima rilevazione",
+    "lastDecay": "Ultimo decadimento del punteggio",
+    "low": "Basso",
+    "medium": "Medio",
+    "high": "Alto",
+    "critical": "Critico",
+    "notRecorded": "Nessun dato registrato",
+    "unavailable": "Non disponibile",
+    "bands": "Fasce di punteggio: Basso 0–24 · Medio 25–49 · Alto 50–74 · Critico 75–100."
+  },
   "Common": {
     "save": "Salva",
     "cancel": "Annulla",

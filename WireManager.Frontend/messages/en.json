@@ -1,4 +1,20 @@
 {
+  "Ids": {
+    "risk": "IDS Risk",
+    "title": "Intrusion Detection",
+    "score": "IDS score",
+    "scoreAndLevel": "Score and risk level",
+    "scoreDescription": "{score} out of 100, {level}",
+    "lastDetection": "Last detection",
+    "lastDecay": "Last score decay",
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "critical": "Critical",
+    "notRecorded": "None recorded",
+    "unavailable": "Not available",
+    "bands": "Score bands: Low 0–24 · Medium 25–49 · High 50–74 · Critical 75–100."
+  },
   "Common": {
     "save": "Save",
     "cancel": "Cancel",

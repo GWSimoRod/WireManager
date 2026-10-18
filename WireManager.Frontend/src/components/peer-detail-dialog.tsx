@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PeerIdsSection } from "@/components/ids-risk";
 import {
   Dialog,
   DialogContent,
@@ -620,6 +621,8 @@ export function PeerDetailDialog({
                 <InfoCard icon={<Clock className="h-4 w-4 text-orange-400" />} label="Persistent KeepAlive" value={peer.persistentKeepAlive ? `${peer.persistentKeepAlive}s` : "Off"} />
               </div>
             </div>
+
+            <PeerIdsSection peer={peer} />
 
             {/* Live stats */}
             <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
