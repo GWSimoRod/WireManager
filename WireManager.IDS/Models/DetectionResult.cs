@@ -10,6 +10,8 @@
     public class DetectionResult
     {
 
+        public long Id { get; set; }
+
         public int PeerId { get; set; }
         public string RuleName { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;

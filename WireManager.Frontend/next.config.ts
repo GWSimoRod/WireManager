@@ -9,6 +9,8 @@ if (process.env.NODE_ENV === 'development') {
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // SignalR's Node transport loads native Node dependencies at runtime.
+  serverExternalPackages: ['@microsoft/signalr'],
 };
 
 export default withNextIntl(nextConfig);

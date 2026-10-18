@@ -10,6 +10,8 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Serialization;
+using WireManager.API.Hubs;
+using WireManager.API.Services;
 using WireManager.Core.Data;
 using WireManager.Core.Domain;
 using WireManager.Core.Interfaces;
@@ -42,6 +44,7 @@ builder.Services.AddDbContext<WireManagerContext>();
 builder.Services.AddOpenApi();
 
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddSignalR();
 
 // Registrazione dei servizi Core nel container di Dependency Injection
 builder.Services.AddScoped<IPeerServices, PeerServices>();
@@ -56,6 +59,8 @@ builder.Services.AddScoped<ITokenServices, TokenServices>();
 builder.Services.AddScoped<ISSOServices, SSOServices>();
 builder.Services.AddScoped<IMFAServices, MFAServices>();
 builder.Services.AddScoped<IBackupServices, BackupServices>();
+builder.Services.AddScoped<INotificationServices, NotificationServices>();
+builder.Services.AddScoped<ISignal, SignalServices>();
 builder.Services.AddScoped<ConnectionEventEnricher>();
 
 // Gestione della cartella base e della chiave segreta per il JWT
@@ -120,6 +125,19 @@ builder.Services.AddAuthentication(options =>
 
     options.Events = new JwtBearerEvents
     {
+        OnMessageReceived = context =>
+        {
+            // I browser inviano il token nella query per WebSocket e SSE.
+            // Accettarlo solo sul percorso dell'Hub mantiene invariata l'API REST.
+            var accessToken = context.Request.Query["access_token"];
+            if (!string.IsNullOrEmpty(accessToken) &&
+                context.HttpContext.Request.Path.StartsWithSegments(NotificationHub.Route))
+            {
+                context.Token = accessToken;
+            }
+
+            return Task.CompletedTask;
+        },
         OnAuthenticationFailed = context =>
         {
             Console.ForegroundColor = ConsoleColor.Red;
@@ -305,5 +323,9 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<NotificationHub>(NotificationHub.Route, options =>
+{
+    options.CloseOnAuthenticationExpiration = true;
+});
 
 app.Run();

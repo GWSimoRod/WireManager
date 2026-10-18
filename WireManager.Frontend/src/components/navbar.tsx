@@ -10,6 +10,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from 
 import { SidebarContent } from '@/components/sidebar'
 import { useTranslations } from 'next-intl'
 import { LanguageSwitcher } from './language-switcher'
+import { NotificationCenter } from './notification-center'
 
 const roleBadgeColors: Record<string, string> = {
   Admin: 'bg-red-500/15 text-red-400 border-red-500/20',
@@ -54,11 +55,12 @@ export function Navbar() {
         <h1 className="text-lg font-semibold text-zinc-100">{getPageTitle()}</h1>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
+        {(userRole === 'Admin' || userRole === 'Operator') && <NotificationCenter key={username} />}
         <LanguageSwitcher />
         <Badge
           variant="secondary"
-          className={`gap-1.5 max-w-[140px] sm:max-w-[200px] md:max-w-[260px] min-w-0 ${userRole ? roleBadgeColors[userRole] || '' : ''}`}
+          className={`hidden sm:inline-flex gap-1.5 max-w-[200px] md:max-w-[260px] min-w-0 ${userRole ? roleBadgeColors[userRole] || '' : ''}`}
         >
           <User className="size-3 shrink-0" />
           <span className="truncate" title={username ?? 'User'}>

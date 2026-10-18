@@ -1,11 +1,14 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using WireManager.Core.Data;
+using WireManager.Core.Interfaces;
+using WireManager.Core.Models;
 using WireManager.IDS.Detection;
-using WireManager.IDS.Store;
+using WireManager.IDS.Models;
 using WireManager.IDS.Scoring;
+using WireManager.IDS.Store;
 
 namespace WireManager.IDS.Worker
 {
@@ -59,6 +62,10 @@ namespace WireManager.IDS.Worker
 
             var context = scope.ServiceProvider
                 .GetRequiredService<WireManagerContext>();
+
+            var notificationServices = scope.ServiceProvider
+                .GetRequiredService<INotificationServices>();
+
 
             if (cancellation.IsCancellationRequested)
             {
@@ -123,6 +130,26 @@ namespace WireManager.IDS.Worker
                                         p => p.LastIdsScoreDecay,
                                         p => (DateTime?)null),
                                 cancellation);
+
+                        foreach (var result in detectionResults)
+                        {
+                            await notificationServices.CreateAsync(new Notification
+                            {
+                                Title = $"IDS: {result.RuleName}",
+                                Message = $"Peer #{result.PeerId}: {result.Description}",
+                                Type = NotificationType.IDS,
+                                Severity = result.Severity switch
+                                {
+                                    DetectionSeverity.Low => NotificationSeverity.Info,
+                                    DetectionSeverity.Medium => NotificationSeverity.Warning,
+                                    DetectionSeverity.High => NotificationSeverity.Warning,
+                                    DetectionSeverity.Critical => NotificationSeverity.Critical,
+                                    _ => NotificationSeverity.Info
+                                },
+                                CreatedAt = result.Timestamp,
+                                UserType = UserType.Admin
+                            });
+                        }
 
                     }
                     else

@@ -127,6 +127,22 @@
   html {
     @apply font-sans;
   }
+  /* Use a hand cursor only for interactive, enabled controls. */
+  :where(
+    button, a[href], summary, select,
+    input[type="button"], input[type="submit"], input[type="reset"],
+    input[type="checkbox"], input[type="radio"],
+    [role="button"], [role="tab"], [role="switch"],
+    [role="checkbox"], [role="radio"], [role="option"],
+    [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"]
+  ):not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    cursor: pointer;
+  }
+  :where(button, select, input, [role]):is(
+    :disabled, [aria-disabled="true"], [data-disabled]
+  ) {
+    cursor: default;
+  }
 }
 
 /* ─── Custom Animations ──────────────────────────────────────────────── */

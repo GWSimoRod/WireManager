@@ -19,6 +19,8 @@ namespace WireManager.Core.Data
         public DbSet<AuthenticationSSO> AuthenticationSSOs { get; set; }
         public DbSet<UserIdentity> UserIdentities { get; set; }
         public DbSet<AutomaticBackup> AutomaticBackups { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
+        public DbSet<UserNotification> UserNotifications { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -118,6 +120,53 @@ namespace WireManager.Core.Data
                     x => x.ToTimeSpan(),
                     x => TimeOnly.FromTimeSpan(x)
                 );
+
+            modelBuilder.Entity<Notification>(entity =>
+            {
+                entity.ToTable("Notifications");
+
+                entity.HasKey(n => n.Id);
+
+                entity.Property(n => n.Title)
+                    .IsRequired()
+                    .HasMaxLength(150);
+
+                entity.Property(n => n.Message)
+                    .IsRequired()
+                    .HasMaxLength(1000);
+
+                entity.Property(n => n.CreatedAt)
+                    .IsRequired();
+
+                entity.HasIndex(n => n.CreatedAt);
+            });
+
+            modelBuilder.Entity<UserNotification>(entity =>
+            {
+                entity.ToTable("UserNotifications");
+
+                entity.HasKey(un => un.Id);
+
+                // Evita notifiche duplicate per lo stesso utente
+                entity.HasIndex(un => new
+                {
+                    un.UserId,
+                    un.NotificationId
+                }).IsUnique();
+
+                // Relazione con Notification
+                entity.HasOne(un => un.Notification)
+                    .WithMany()
+                    .HasForeignKey(un => un.NotificationId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Relazione con User
+                entity.HasOne(un => un.User)
+                    .WithMany()
+                    .HasForeignKey(un => un.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
         }
 
     }
