@@ -21,6 +21,7 @@ using WireManager.IDS.Detection;
 using WireManager.IDS.Detection.Rules;
 using WireManager.IDS.Enrichment;
 using WireManager.IDS.Interfaces;
+using WireManager.IDS.Scoring;
 using WireManager.IDS.Store;
 using WireManager.IDS.Worker;
 
@@ -193,7 +194,12 @@ builder.Services.AddSingleton<DetectionEngine>();
 
 // Registrazione regole IDS
 builder.Services.AddSingleton<IDetectionRule, PortScanRule>();
+builder.Services.AddSingleton<IDetectionRule, NetworkScanRule>();
+builder.Services.AddSingleton<IDetectionRule, AclViolationRule>();
+builder.Services.AddSingleton<IDetectionRule, SensitiveAccessRule>();
 
+// registro il calcolatore di score IDS
+builder.Services.AddSingleton<IdsScoreCalculator>();
 
 // Registrazione dei processi in background
 builder.Services.AddHostedService<PeerExpirationWorker>();

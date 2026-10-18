@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using WireManager.IDS.Interfaces;
@@ -6,8 +7,11 @@ using WireManager.IDS.Models;
 
 namespace WireManager.IDS.Detection.Rules
 {
-    public class PortScanRule : IDetectionRule
+    public class PortScanRule(ILogger<PortScanRule> logger) : IDetectionRule
     {
+
+        private readonly ILogger<PortScanRule> _logger = logger;
+
         public string Name => "Port Scanning";
 
         private const int PortScanThreshold = 15;
@@ -41,6 +45,14 @@ namespace WireManager.IDS.Detection.Rules
 
                 if (uniquePorts >= PortScanThreshold)
                 {
+
+                    _logger.LogWarning(
+                        "Port scanning detected from {SourceIP} to {DestinationIP} ({Protocol}). Unique ports: {UniquePorts}.",
+                        group.Key.SourceIP,
+                        group.Key.DestinationIP,
+                        group.Key.Protocol,
+                        uniquePorts);
+
                     yield return new DetectionResult
                     {
                         PeerId = group.Key.PeerId!.Value,
